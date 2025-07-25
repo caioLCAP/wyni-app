@@ -1,0 +1,17 @@
+**/AppData/**
+**/Local/**
+**/Roaming/**
+**/Users/**
+**/node_modules/**
+.expo
+.expo-shared
+.git
+*.log
+*.tmp
+*.bak
+*.tar.gz
+.DS_Store
+.vscode
+.idea
+.env
+.env.*
