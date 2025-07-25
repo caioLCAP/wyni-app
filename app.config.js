@@ -6,6 +6,7 @@ module.exports = {
     orientation: "portrait",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
+     icon: "./assets/images/icon.png",
     newArchEnabled: true,
     owner: "luis-pedrosa", // <- importante para builds EAS
     ios: {
