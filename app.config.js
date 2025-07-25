@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 module.exports = {
   expo: {
     name: "WYNI - O vinho do seu jeito",
@@ -6,14 +8,19 @@ module.exports = {
     orientation: "portrait",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
-     icon: "./assets/images/icon.png",
+    icon: "./assets/images/icon.png",
+    splash: {
+      image: "./assets/images/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#6a005fff"
+    },
     newArchEnabled: true,
-    owner: "luis-pedrosa", // <- importante para builds EAS
+    owner: "luis-pedrosa",
     ios: {
       bundleIdentifier: "com.luispedrosa.wyni",
       supportsTablet: true,
       infoPlist: {
-    ITSAppUsesNonExemptEncryption: false
+        ITSAppUsesNonExemptEncryption: false
       }
     },
     android: {
