@@ -4,13 +4,6 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
     "apk": {
       "android": {
         "buildType": "apk"
@@ -22,12 +15,27 @@
         "buildType": "app-bundle"
       },
       "autoIncrement": true
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "appstore": {
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
+      "autoIncrement": true
     }
   },
   "submit": {
-    "appbundle": {
-      "android": {}
-    },
-    "apk": {}
+    "appstore": {
+      "ios": {
+        "appleId": "lupacap@gmail.com"
+      }
+    }
   }
 }

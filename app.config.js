@@ -11,8 +11,8 @@ module.exports = {
     icon: "./assets/images/icon.png",
     splash: {
       image: "./assets/images/splash.png",
-      resizeMode: "contain",
-      backgroundColor: "#6a005fff"
+      resizeMode: "cover",
+      backgroundColor: "#6a005f"
     },
     newArchEnabled: true,
     owner: "luis-pedrosa",
