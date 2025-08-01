@@ -90,7 +90,7 @@ export const searchWineByName = async (wineName: string): Promise<WineType | nul
           food_pairing:food_pairings(name)
         ),
         regions:grape_regions(
-          region:regions(name)
+          region:regions(name, country:countries(name))
         )
       `)
       .ilike('name', `%${wineName}%`)
@@ -106,16 +106,23 @@ export const searchWineByName = async (wineName: string): Promise<WineType | nul
       const randomYear = Math.floor(Math.random() * 20) + (currentYear - 25);
       const randomPrice = Math.floor(Math.random() * 500) + 50;
 
+      // Construir informação de região mais detalhada
+      let regionInfo = wineData.country?.name || 'Região Desconhecida';
+      if (wineData.regions && wineData.regions.length > 0) {
+        const region = wineData.regions[0].region;
+        regionInfo = `${region.name}, ${region.country?.name || wineData.country?.name}`;
+      }
+
       return {
         id: wineData.id,
         name: wineData.name,
         type: wineData.wine_type || wineData.type,
-        region: wineData.country?.name || 'Região Desconhecida',
+        region: regionInfo,
         year: randomYear.toString(),
         rating: Math.round((Math.random() * 2 + 3) * 10) / 10,
         price: `R$ ${randomPrice},00`,
         imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
-        description: wineData.description || 'Vinho de qualidade excepcional com características únicas.',
+        description: wineData.description || `${wineData.name} é uma uva ${wineData.wine_type?.toLowerCase() || 'especial'} com características únicas e tradição vinícola. Originária de ${regionInfo}, oferece uma experiência sensorial excepcional com aromas e sabores distintivos.`,
         grapes: wineData.name,
         characteristics: wineData.characteristics?.map(c => c.characteristic.name) || [],
         pairings: wineData.food_pairings?.map(p => p.food_pairing.name) || [],

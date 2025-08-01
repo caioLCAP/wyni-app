@@ -12,7 +12,7 @@ module.exports = {
     splash: {
       image: "./assets/images/splash.png",
       resizeMode: "cover",
-      backgroundColor: "#6a005f"
+      backgroundColor: "#57004e"
     },
     newArchEnabled: true,
     owner: "luis-pedrosa",
@@ -25,7 +25,11 @@ module.exports = {
     },
     android: {
       package: "com.luispedrosa.wyni",
-      versionCode: 1
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: "./assets/images/splash.png",
+        backgroundColor: "#57004e"
+      }
     },
     web: {
       bundler: "metro",

@@ -10,10 +10,12 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { X, Wine, Calendar, MapPin, Grape, Percent, Utensils, DollarSign, Save } from 'lucide-react-native';
+import { X, Wine, Calendar, MapPin, Grape, Percent, Utensils, DollarSign, Save, Share2 } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { wineStorageService, WineAnalysisData } from '@/services/wineStorageService';
 import { useAuth } from '@/providers/AuthProvider';
+import { ShareModal } from '@/components/ShareModal';
+import { ShareWineData } from '@/services/shareService';
 
 interface WineAnalysisResult {
   wineName?: string;
@@ -48,6 +50,7 @@ export function WineAnalysisModal({
 }: WineAnalysisModalProps) {
   const { user } = useAuth();
   const [saving, setSaving] = React.useState(false);
+  const [showShareModal, setShowShareModal] = React.useState(false);
 
   const handleSaveWine = async () => {
     if (!analysis) return;
@@ -106,20 +109,42 @@ export function WineAnalysisModal({
     }
   };
 
+  const handleShare = () => {
+    setShowShareModal(true);
+  };
+
+  const getShareData = (): ShareWineData => {
+    return {
+      name: analysis?.wineName || 'Vinho Analisado',
+      winery: analysis?.winery,
+      region: analysis?.region,
+      vintage: analysis?.vintage,
+      description: analysis?.description,
+      rating: 4.5, // Default rating for AI analysis
+      grapes: (analysis?.grapeVarieties ?? []).join(', '),
+    };
+  };
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Análise do Vinho</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <X size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={onClose}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Análise do Vinho</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                <Share2 size={20} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {analysis && (
@@ -288,7 +313,16 @@ export function WineAnalysisModal({
           )}
         </ScrollView>
       </View>
-    </Modal>
+      </Modal>
+
+      {analysis && (
+        <ShareModal
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          wine={getShareData()}
+        />
+      )}
+    </>
   );
 }
 
@@ -311,6 +345,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.text,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shareButton: {
+    padding: 8,
   },
   closeButton: {
     padding: 8,

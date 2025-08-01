@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/constants/colors';
 import { WineDetailsCard } from '@/components/WineDetailsCard';
 import { WineAnalysisModal } from '@/components/WineAnalysisModal';
+import { ShareModal } from '@/components/ShareModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { searchWineByName } from '@/services/wineService';
 import { openaiService } from '@/services/openaiService';
@@ -24,6 +25,7 @@ import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
 import { wineStorageService } from '@/services/wineStorageService';
 import { useAuth } from '@/providers/AuthProvider';
+import { shareService, ShareWineData } from '@/services/shareService';
 
 interface WineAnalysisResult {
   wineName?: string;
@@ -54,6 +56,7 @@ export default function ScannerScreen() {
   const [aiAnalysis, setAiAnalysis] = useState<WineAnalysisResult | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const cameraRef = useRef<any>(null);
   const { user } = useAuth();
 
@@ -167,7 +170,7 @@ export default function ScannerScreen() {
       grapes: savedWine.grape_varieties?.join(', ') || savedWine.wine_name,
       characteristics: [],
       pairings: savedWine.food_pairings || [],
-      aromas: []
+      aromas: savedWine.tasting_notes ? [savedWine.tasting_notes] : []
     };
   };
 
@@ -277,23 +280,80 @@ export default function ScannerScreen() {
     router.push('/(tabs)/library');
   };
 
+  const handleShareWine = (wine: WineType) => {
+    setShowShareModal(true);
+  };
+
+  const getShareDataFromWine = (wine: WineType): ShareWineData => {
+    return {
+      name: wine.name,
+      region: wine.region,
+      vintage: wine.year,
+      description: wine.description,
+      rating: wine.rating,
+      grapes: wine.grapes,
+    };
+  };
   const handleSaveWineFromAI = async (analysis: WineAnalysisResult) => {
-    // Tentar buscar o vinho na base de dados primeiro
-    if (analysis.wineName) {
-      const foundWine = await searchWineByName(analysis.wineName);
-      if (foundWine) {
-        setScanResult(foundWine);
-        setShowAIModal(false);
-        return;
-      }
+    if (!user) {
+      Alert.alert(
+        'Login necessário',
+        'Você precisa estar logado para salvar vinhos',
+        [{ text: 'OK' }]
+      );
+      return;
     }
-    
-    // Se não encontrou, mostrar mensagem
-    Alert.alert(
-      'Vinho não encontrado',
-      `O vinho "${analysis.wineName || 'identificado'}" não foi encontrado em nossa base de dados. Você pode adicioná-lo manualmente na seção "Adicionar Vinho".`,
-      [{ text: 'OK' }]
-    );
+
+    try {
+      // Primeiro, tentar buscar o vinho na base de dados
+      if (analysis.wineName) {
+        const foundWine = await searchWineByName(analysis.wineName);
+        if (foundWine) {
+          setScanResult(foundWine);
+          setShowAIModal(false);
+          return;
+        }
+      }
+      
+      // Se não encontrou na base de dados, salvar os dados da IA
+      const wineData = {
+        wineName: analysis.wineName || 'Vinho Analisado',
+        winery: analysis.winery,
+        vintage: analysis.vintage,
+        region: analysis.region,
+        country: analysis.country,
+        grapeVarieties: analysis.grapeVarieties,
+        alcoholContent: analysis.alcoholContent,
+        wineType: analysis.wineType,
+        tastingNotes: analysis.tastingNotes,
+        foodPairings: analysis.foodPairings,
+        priceRange: analysis.priceRange,
+        description: analysis.description,
+        rating: 4.5 // Rating padrão para vinhos da IA
+      };
+
+      const savedWine = await wineStorageService.saveWineFromAI(wineData);
+      
+      if (savedWine) {
+        // Converter para WineType e mostrar na tela de resultado
+        const wineType = convertSavedWineToWineType(savedWine);
+        setScanResult(wineType);
+        setShowAIModal(false);
+        
+        Alert.alert(
+          'Sucesso!',
+          `"${analysis.wineName || 'Vinho'}" foi salvo na sua biblioteca com sucesso!`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao salvar vinho da IA:', error);
+      Alert.alert(
+        'Erro ao salvar',
+        'Não foi possível salvar o vinho na biblioteca. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   // Tela de resultado do vinho encontrado
@@ -307,8 +367,17 @@ export default function ScannerScreen() {
           <View style={styles.resultHeaderContent}>
             <Text style={styles.resultTitle}>Vinho Encontrado!</Text>
             <Text style={styles.resultSubtitle}>
-              Informações da nossa base de dados
+              {scanResult.id.startsWith('saved-') 
+                ? 'Da sua biblioteca pessoal' 
+                : 'Da nossa base de dados'}
             </Text>
+            <TouchableOpacity 
+              style={styles.shareHeaderButton}
+              onPress={() => handleShareWine(scanResult)}
+            >
+              <BookOpen size={20} color={colors.textLight} />
+              <Text style={styles.shareHeaderButtonText}>Compartilhar</Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
         
@@ -333,6 +402,12 @@ export default function ScannerScreen() {
             <Text style={styles.libraryText}>Ver Biblioteca</Text>
           </TouchableOpacity>
         </View>
+
+        <ShareModal
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          wine={getShareDataFromWine(scanResult)}
+        />
       </View>
     );
   }
@@ -974,43 +1049,57 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   resultHeader: {
-    paddingTop: 60,
-    paddingBottom: 32,
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 24,
   },
   resultHeaderContent: {
     alignItems: 'center',
   },
   resultTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.textLight,
     marginBottom: 8,
     textAlign: 'center',
   },
   resultSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textLight,
     opacity: 0.9,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  shareHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 8,
+  },
+  shareHeaderButtonText: {
+    color: colors.textLight,
+    fontSize: 12,
+    fontWeight: '600',
   },
   resultContent: {
     flex: 1,
-    marginTop: -24,
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 32,
   },
   resultFooter: {
     flexDirection: 'row',
-    padding: 20,
-    paddingBottom: 32,
+    padding: 16,
+    paddingBottom: 24,
     gap: 12,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   scanAgainButton: {
     flex: 1,
