@@ -14,8 +14,7 @@ import { X, Wine, Calendar, MapPin, Grape, Percent, Utensils, DollarSign, Save, 
 import { colors } from '@/constants/colors';
 import { wineStorageService, WineAnalysisData } from '@/services/wineStorageService';
 import { useAuth } from '@/providers/AuthProvider';
-import { ShareModal } from '@/components/ShareModal';
-import { ShareWineData } from '@/services/shareService';
+import { shareService, ShareWineData } from '@/services/shareService';
 
 interface WineAnalysisResult {
   wineName?: string;
@@ -50,7 +49,6 @@ export function WineAnalysisModal({
 }: WineAnalysisModalProps) {
   const { user } = useAuth();
   const [saving, setSaving] = React.useState(false);
-  const [showShareModal, setShowShareModal] = React.useState(false);
 
   const handleSaveWine = async () => {
     if (!analysis) return;
@@ -109,30 +107,35 @@ export function WineAnalysisModal({
     }
   };
 
-  const handleShare = () => {
-    setShowShareModal(true);
-  };
-
-  const getShareData = (): ShareWineData => {
-    return {
-      name: analysis?.wineName || 'Vinho Analisado',
-      winery: analysis?.winery,
-      region: analysis?.region,
-      vintage: analysis?.vintage,
-      description: analysis?.description,
-      rating: 4.5, // Default rating for AI analysis
-      grapes: Array.isArray(analysis?.grapeVarieties) ? analysis.grapeVarieties.join(', ') : (analysis?.grapeVarieties || 'Não especificado'),
-    };
+  const handleShare = async () => {
+    if (!analysis) return;
+    
+    try {
+      const shareData: ShareWineData = {
+        name: analysis.wineName || 'Vinho Analisado',
+        winery: analysis.winery,
+        region: analysis.region,
+        vintage: analysis.vintage,
+        description: analysis.description,
+        rating: 4.5,
+        grapes: Array.isArray(analysis.grapeVarieties) 
+          ? analysis.grapeVarieties.join(', ') 
+          : (analysis.grapeVarieties || 'Não especificado'),
+      };
+      
+      await shareService.shareWine(shareData);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível compartilhar o vinho');
+    }
   };
 
   return (
-    <>
-      <Modal
-        visible={visible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={onClose}
-      >
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Análise do Vinho</Text>
@@ -146,183 +149,174 @@ export function WineAnalysisModal({
             </View>
           </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {analysis && (
-            <>
-              {/* Informações Básicas */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Informações Básicas</Text>
-                
-                {analysis.wineName && (
-                  <View style={styles.infoItem}>
-                    <Wine size={20} color={colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Nome do Vinho</Text>
-                      <Text style={styles.infoValue}>{analysis.wineName}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {analysis.winery && (
-                  <View style={styles.infoItem}>
-                    <Wine size={20} color={colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Vinícola</Text>
-                      <Text style={styles.infoValue}>{analysis.winery}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {analysis.vintage && (
-                  <View style={styles.infoItem}>
-                    <Calendar size={20} color={colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Safra</Text>
-                      <Text style={styles.infoValue}>{analysis.vintage}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {analysis.wineType && (
-                  <View style={styles.infoItem}>
-                    <Wine size={20} color={colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Tipo</Text>
-                      <Text style={styles.infoValue}>{analysis.wineType}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {analysis.alcoholContent && (
-                  <View style={styles.infoItem}>
-                    <Percent size={20} color={colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Teor Alcoólico</Text>
-                      <Text style={styles.infoValue}>{analysis.alcoholContent}</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              {/* Origem */}
-              {(analysis.region || analysis.country) && (
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {analysis && (
+              <>
+                {/* Informações Básicas */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Origem</Text>
+                  <Text style={styles.sectionTitle}>Informações Básicas</Text>
                   
-                  {analysis.region && (
+                  {analysis.wineName && (
                     <View style={styles.infoItem}>
-                      <MapPin size={20} color={colors.primary} />
+                      <Wine size={20} color={colors.primary} />
                       <View style={styles.infoContent}>
-                        <Text style={styles.infoLabel}>Região</Text>
-                        <Text style={styles.infoValue}>{analysis.region}</Text>
+                        <Text style={styles.infoLabel}>Nome do Vinho</Text>
+                        <Text style={styles.infoValue}>{analysis.wineName}</Text>
                       </View>
                     </View>
                   )}
 
-                  {analysis.country && (
+                  {analysis.winery && (
                     <View style={styles.infoItem}>
-                      <MapPin size={20} color={colors.primary} />
+                      <Wine size={20} color={colors.primary} />
                       <View style={styles.infoContent}>
-                        <Text style={styles.infoLabel}>País</Text>
-                        <Text style={styles.infoValue}>{analysis.country}</Text>
+                        <Text style={styles.infoLabel}>Vinícola</Text>
+                        <Text style={styles.infoValue}>{analysis.winery}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {analysis.vintage && (
+                    <View style={styles.infoItem}>
+                      <Calendar size={20} color={colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Safra</Text>
+                        <Text style={styles.infoValue}>{analysis.vintage}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {analysis.wineType && (
+                    <View style={styles.infoItem}>
+                      <Wine size={20} color={colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Tipo</Text>
+                        <Text style={styles.infoValue}>{analysis.wineType}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {analysis.alcoholContent && (
+                    <View style={styles.infoItem}>
+                      <Percent size={20} color={colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Teor Alcoólico</Text>
+                        <Text style={styles.infoValue}>{analysis.alcoholContent}</Text>
                       </View>
                     </View>
                   )}
                 </View>
-              )}
 
-              {/* Uvas */}
-              {analysis.grapeVarieties && Array.isArray(analysis.grapeVarieties) && analysis.grapeVarieties.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Castas/Uvas</Text>
-                  <View style={styles.tagsContainer}>
-                    {analysis.grapeVarieties.map((grape, index) => (
-                      <View key={index} style={styles.grapeTag}>
-                        <Grape size={16} color={colors.primary} />
-                        <Text style={styles.grapeTagText}>{grape}</Text>
+                {/* Origem */}
+                {(analysis.region || analysis.country) && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Origem</Text>
+                    
+                    {analysis.region && (
+                      <View style={styles.infoItem}>
+                        <MapPin size={20} color={colors.primary} />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>Região</Text>
+                          <Text style={styles.infoValue}>{analysis.region}</Text>
+                        </View>
                       </View>
-                    ))}
-                  </View>
-                </View>
-              )}
+                    )}
 
-              {/* Descrição */}
-              {analysis.description && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Descrição</Text>
-                  <Text style={styles.descriptionText}>{analysis.description}</Text>
-                </View>
-              )}
-
-              {/* Notas de Degustação */}
-              {analysis.tastingNotes && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Notas de Degustação</Text>
-                  <Text style={styles.descriptionText}>{analysis.tastingNotes}</Text>
-                </View>
-              )}
-
-              {/* Harmonizações */}
-              {analysis.foodPairings && Array.isArray(analysis.foodPairings) && analysis.foodPairings.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Harmonizações</Text>
-                  <View style={styles.tagsContainer}>
-                    {analysis.foodPairings.map((pairing, index) => (
-                      <View key={index} style={styles.pairingTag}>
-                        <Utensils size={16} color={colors.secondary} />
-                        <Text style={styles.pairingTagText}>{pairing}</Text>
+                    {analysis.country && (
+                      <View style={styles.infoItem}>
+                        <MapPin size={20} color={colors.primary} />
+                        <View style={styles.infoContent}>
+                          <Text style={styles.infoLabel}>País</Text>
+                          <Text style={styles.infoValue}>{analysis.country}</Text>
+                        </View>
                       </View>
-                    ))}
+                    )}
                   </View>
-                </View>
-              )}
+                )}
 
-              {/* Faixa de Preço */}
-              {analysis.priceRange && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Faixa de Preço Estimada</Text>
-                  <View style={styles.infoItem}>
-                    <DollarSign size={20} color={colors.primary} />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoValue}>{analysis.priceRange}</Text>
+                {/* Uvas */}
+                {analysis.grapeVarieties && Array.isArray(analysis.grapeVarieties) && analysis.grapeVarieties.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Castas/Uvas</Text>
+                    <View style={styles.tagsContainer}>
+                      {analysis.grapeVarieties.map((grape, index) => (
+                        <View key={index} style={styles.grapeTag}>
+                          <Grape size={16} color={colors.primary} />
+                          <Text style={styles.grapeTagText}>{grape}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
+                )}
+
+                {/* Descrição */}
+                {analysis.description && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Descrição</Text>
+                    <Text style={styles.descriptionText}>{analysis.description}</Text>
+                  </View>
+                )}
+
+                {/* Notas de Degustação */}
+                {analysis.tastingNotes && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Notas de Degustação</Text>
+                    <Text style={styles.descriptionText}>{analysis.tastingNotes}</Text>
+                  </View>
+                )}
+
+                {/* Harmonizações */}
+                {analysis.foodPairings && Array.isArray(analysis.foodPairings) && analysis.foodPairings.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Harmonizações</Text>
+                    <View style={styles.tagsContainer}>
+                      {analysis.foodPairings.map((pairing, index) => (
+                        <View key={index} style={styles.pairingTag}>
+                          <Utensils size={16} color={colors.secondary} />
+                          <Text style={styles.pairingTagText}>{pairing}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Faixa de Preço */}
+                {analysis.priceRange && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Faixa de Preço Estimada</Text>
+                    <View style={styles.infoItem}>
+                      <DollarSign size={20} color={colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoValue}>{analysis.priceRange}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Botão Salvar */}
+                <View style={styles.actionSection}>
+                  <TouchableOpacity 
+                    style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+                    onPress={handleSaveWine}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <ActivityIndicator color={colors.textLight} size="small" />
+                    ) : (
+                      <Save size={20} color={colors.textLight} />
+                    )}
+                    <Text style={styles.saveButtonText}>
+                      {saving ? 'Salvando...' : 'Salvar na Biblioteca'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              )}
 
-              {/* Botão Salvar */}
-              <View style={styles.actionSection}>
-                <TouchableOpacity 
-                  style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
-                  onPress={handleSaveWine}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator color={colors.textLight} size="small" />
-                  ) : (
-                    <Save size={20} color={colors.textLight} />
-                  )}
-                  <Text style={styles.saveButtonText}>
-                    {saving ? 'Salvando...' : 'Salvar na Biblioteca'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.bottomPadding} />
-            </>
-          )}
-        </ScrollView>
-      </View>
-      </Modal>
-
-      {analysis && (
-        <ShareModal
-          visible={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          wine={getShareData()}
-        />
-      )}
-    </>
+                <View style={styles.bottomPadding} />
+              </>
+            )}
+          </ScrollView>
+        </View>
+    </Modal>
   );
 }
 

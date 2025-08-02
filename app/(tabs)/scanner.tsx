@@ -56,7 +56,6 @@ export default function ScannerScreen() {
   const [aiAnalysis, setAiAnalysis] = useState<WineAnalysisResult | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const cameraRef = useRef<any>(null);
   const { user } = useAuth();
 
@@ -281,19 +280,22 @@ export default function ScannerScreen() {
   };
 
   const handleShareWine = (wine: WineType) => {
-    setShowShareModal(true);
+    try {
+      const shareData: ShareWineData = {
+        name: wine.name,
+        region: wine.region,
+        vintage: wine.year,
+        description: wine.description,
+        rating: wine.rating,
+        grapes: wine.grapes,
+      };
+      
+      shareService.shareWine(shareData);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível compartilhar o vinho');
+    }
   };
 
-  const getShareDataFromWine = (wine: WineType): ShareWineData => {
-    return {
-      name: wine.name,
-      region: wine.region,
-      vintage: wine.year,
-      description: wine.description,
-      rating: wine.rating,
-      grapes: wine.grapes,
-    };
-  };
   const handleSaveWineFromAI = async (analysis: WineAnalysisResult) => {
     if (!user) {
       Alert.alert(
@@ -403,11 +405,6 @@ export default function ScannerScreen() {
           </TouchableOpacity>
         </View>
 
-        <ShareModal
-          visible={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          wine={getShareDataFromWine(scanResult)}
-        />
       </View>
     );
   }
