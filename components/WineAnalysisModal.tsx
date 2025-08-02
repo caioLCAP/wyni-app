@@ -121,7 +121,7 @@ export function WineAnalysisModal({
       vintage: analysis?.vintage,
       description: analysis?.description,
       rating: 4.5, // Default rating for AI analysis
-      grapes: (analysis?.grapeVarieties ?? []).join(', '),
+      grapes: Array.isArray(analysis?.grapeVarieties) ? analysis.grapeVarieties.join(', ') : (analysis?.grapeVarieties || 'Não especificado'),
     };
   };
 

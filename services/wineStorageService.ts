@@ -591,6 +591,24 @@ export class WineStorageService {
       return 0;
     }
   }
+
+  convertSavedWinesToWineType = (savedWines: SavedWine[]): WineType[] => {
+    return savedWines.map(wine => ({
+      id: `saved-${wine.id}`,
+      name: wine.wine_name,
+      type: wine.wine_type || 'Vinho',
+      region: wine.region || 'Região não informada',
+      year: wine.vintage || '2020',
+      rating: wine.rating || 4.0,
+      price: wine.price_range || 'Preço não informado',
+      imageUrl: wine.image_url || 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
+      description: wine.description,
+      grapes: Array.isArray(wine.grape_varieties) ? wine.grape_varieties.join(', ') : (wine.grape_varieties || wine.wine_name),
+      characteristics: [],
+      pairings: wine.food_pairings || [],
+      aromas: []
+    }));
+  };
 }
 
 export const wineStorageService = WineStorageService.getInstance();

@@ -167,7 +167,7 @@ export default function ScannerScreen() {
       price: savedWine.price_range || 'Preço não informado',
       imageUrl: savedWine.image_url || 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
       description: savedWine.description || 'Vinho encontrado na sua biblioteca',
-      grapes: savedWine.grape_varieties?.join(', ') || savedWine.wine_name,
+      grapes: Array.isArray(savedWine.grape_varieties) ? savedWine.grape_varieties.join(', ') : (savedWine.grape_varieties || savedWine.wine_name),
       characteristics: [],
       pairings: savedWine.food_pairings || [],
       aromas: savedWine.tasting_notes ? [savedWine.tasting_notes] : []
