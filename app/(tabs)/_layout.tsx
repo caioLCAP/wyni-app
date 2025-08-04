@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
-import { BookOpen, Utensils as UtensilsIcon, ScanLine, User, Plus, Sun, Moon } from 'lucide-react-native';
+import { BookOpen, Utensils as UtensilsIcon, ScanLine, User, Plus, Sun, Moon, Wine, Home } from 'lucide-react-native';
 import { router, usePathname } from 'expo-router';
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -144,15 +144,15 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Descobrir',
-            tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
           }}
         />
         <Tabs.Screen
           name="library"
           options={{
             title: 'Biblioteca',
-            tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => <Wine size={size} color={color} />,
           }}
         />
         <Tabs.Screen
