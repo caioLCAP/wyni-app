@@ -59,40 +59,6 @@ export default function ProfileScreen() {
     setRefreshing(false);
   };
 
-  const handleCleanDuplicates = async () => {
-    Alert.alert(
-      'Limpar Duplicatas',
-      'Deseja remover vinhos duplicados da sua biblioteca? Esta ação não pode ser desfeita.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Limpar', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setCleaningDuplicates(true);
-              const removedCount = await wineStorageService.removeDuplicateWines();
-              
-              if (removedCount > 0) {
-                Alert.alert(
-                  'Limpeza Concluída',
-                  `${removedCount} vinho(s) duplicado(s) removido(s) com sucesso.`,
-                  [{ text: 'OK', onPress: () => loadUserData() }]
-                );
-              } else {
-                Alert.alert('Limpeza Concluída', 'Nenhum vinho duplicado encontrado.');
-              }
-            } catch (error) {
-              Alert.alert('Erro', 'Não foi possível limpar as duplicatas.');
-            } finally {
-              setCleaningDuplicates(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const convertSavedWinesToWineType = (savedWines: SavedWine[]): WineType[] => {
     return savedWines.map(wine => ({
       id: `saved-${wine.id}`,
@@ -316,24 +282,6 @@ export default function ProfileScreen() {
             <UserCircle size={20} color={colors.text} />
             <Text style={styles.settingsLabel}>Editar Perfil</Text>
             <ChevronRight size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          
-          <View style={styles.settingsDivider} />
-          
-          <TouchableOpacity 
-            style={[styles.settingsItem, cleaningDuplicates && styles.settingsItemDisabled]}
-            onPress={handleCleanDuplicates}
-            disabled={cleaningDuplicates}
-          >
-            {cleaningDuplicates ? (
-              <ActivityIndicator size={20} color={colors.textSecondary} />
-            ) : (
-              <Trash2 size={20} color={colors.text} />
-            )}
-            <Text style={[styles.settingsLabel, cleaningDuplicates && styles.settingsLabelDisabled]}>
-              {cleaningDuplicates ? 'Limpando...' : 'Limpar Duplicatas'}
-            </Text>
-            {!cleaningDuplicates && <ChevronRight size={16} color={colors.textSecondary} />}
           </TouchableOpacity>
           
           <View style={styles.settingsDivider} />
