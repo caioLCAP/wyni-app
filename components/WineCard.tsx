@@ -14,6 +14,7 @@ import { wineStorageService } from '@/services/wineStorageService';
 import { shareService, ShareWineData } from '@/services/shareService';
 import { useAuth } from '@/providers/AuthProvider';
 
+// Define as propriedades esperadas para o WineCard
 interface WineCardProps {
   wine: WineType;
   featured?: boolean;
@@ -33,9 +34,10 @@ export function WineCard({
   isFavorite = false,
   onFavoriteChange 
 }: WineCardProps) {
-  const { user } = useAuth();
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const { user } = useAuth(); // Recupera o usuário autenticado
+  const [favoriteLoading, setFavoriteLoading] = useState(false); // Estado para evitar múltiplos cliques
 
+  // Função chamada ao clicar no botão de favoritar
   const handleFavoritePress = async () => {
     if (!user) {
       Alert.alert('Login necessário', 'Faça login para favoritar vinhos');
@@ -47,18 +49,17 @@ export function WineCard({
     try {
       setFavoriteLoading(true);
       
-      // Para recomendações de IA (vinhos com id começando com 'ai-'), precisamos salvar primeiro
+      // Caso o vinho seja uma sugestão de IA (id começa com 'ai-')
       if (wine.id.startsWith('ai-')) {
         if (!isFavorite) {
-          // Verificar se já existe um vinho similar salvo
+          // Verifica se já existe um vinho salvo com o mesmo nome
           const existingWine = await wineStorageService.findSavedWineByName(wine.name);
           
           let wineToFavorite;
           if (existingWine) {
-            // Usar o vinho existente
             wineToFavorite = existingWine;
           } else {
-            // Salvar o vinho primeiro
+            // Salva o vinho com base nos dados da IA
             wineToFavorite = await wineStorageService.saveWineFromAI({
               wineName: wine.name,
               wineType: wine.type,
@@ -73,19 +74,18 @@ export function WineCard({
           }
 
           if (wineToFavorite) {
-            // Verificar se já é favorito antes de tentar favoritar
+            // Garante que o vinho ainda não esteja favoritado
             const isAlreadyFavorite = await wineStorageService.isWineFavorite(wineToFavorite.id);
             
             if (!isAlreadyFavorite) {
               await wineStorageService.toggleFavorite(wineToFavorite.id);
               onFavoriteChange?.(true);
             } else {
-              // Já é favorito, apenas atualizar o estado
-              onFavoriteChange?.(true);
+              onFavoriteChange?.(true); // Apenas atualiza o estado
             }
           }
         } else {
-          // Remover dos favoritos - encontrar o vinho salvo
+          // Remove o vinho dos favoritos
           const savedWine = await wineStorageService.findSavedWineByName(wine.name);
           
           if (savedWine) {
@@ -94,7 +94,7 @@ export function WineCard({
           }
         }
       } else {
-        // Para vinhos salvos, apenas alternar favorito
+        // Vinho já salvo localmente, apenas alterna o estado de favorito
         const wineId = wine.id.replace('saved-', '');
         const newFavoriteStatus = await wineStorageService.toggleFavorite(wineId);
         onFavoriteChange?.(newFavoriteStatus);
@@ -107,6 +107,7 @@ export function WineCard({
     }
   };
 
+  // Função chamada ao clicar no botão de compartilhar
   const handleSharePress = async () => {
     try {
       const shareData: ShareWineData = {
@@ -118,12 +119,13 @@ export function WineCard({
         grapes: wine.grapes,
       };
 
-      await shareService.shareWine(shareData);
+      await shareService.shareWine(shareData); // Compartilha via serviço
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível compartilhar o vinho');
     }
   };
 
+  // Renderiza versão compacta do card
   if (compact) {
     return (
       <TouchableOpacity style={styles.compactCard}>
@@ -161,6 +163,7 @@ export function WineCard({
     );
   }
 
+  // Renderiza versão horizontal do card
   if (horizontal) {
     return (
       <TouchableOpacity style={styles.horizontalCard}>
@@ -193,11 +196,13 @@ export function WineCard({
             )}
           </View>
           
+          {/* Tipo do vinho */}
           <View style={styles.typeContainer}>
             <Wine size={16} color={colors.primary} />
             <Text style={styles.typeText}>{wine.type}</Text>
           </View>
 
+          {/* Características do vinho */}
           {wine.characteristics && wine.characteristics.length > 0 && (
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Características:</Text>
@@ -211,6 +216,7 @@ export function WineCard({
             </View>
           )}
 
+          {/* Aromas do vinho */}
           {wine.aromas && wine.aromas.length > 0 && (
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Aromas:</Text>
@@ -224,6 +230,7 @@ export function WineCard({
             </View>
           )}
 
+          {/* Rodapé com avaliação e preço */}
           <View style={styles.footer}>
             <View style={styles.ratingContainer}>
               <Star size={16} color={colors.secondary} fill={colors.secondary} />
@@ -236,6 +243,7 @@ export function WineCard({
     );
   }
 
+  // Renderização padrão do card (modo "featured" ou normal)
   return (
     <TouchableOpacity 
       style={[
@@ -300,6 +308,7 @@ export function WineCard({
     </TouchableOpacity>
   );
 }
+
 
 const styles = StyleSheet.create({
   card: {
