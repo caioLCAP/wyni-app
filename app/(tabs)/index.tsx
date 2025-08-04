@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   headerContent: {
-    padding: 24,
+    padding: 50,
   },
   greeting: {
     fontSize: 16,
