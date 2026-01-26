@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
   ScrollView,
   Switch,
   ActivityIndicator,
@@ -20,7 +20,7 @@ import { wineStorageService, SavedWine } from '@/services/wineStorageService';
 import { WineType } from '@/types/wine';
 
 export default function ProfileScreen() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, deleteAccount } = useAuth();
   const [favorites, setFavorites] = useState<WineType[]>([]);
   const [savedWines, setSavedWines] = useState<WineType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +28,9 @@ export default function ProfileScreen() {
   const [notifications, setNotifications] = useState(true);
   const [locationServices, setLocationServices] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
-  
+
   useEffect(() => {
     if (user) {
       loadUserData();
@@ -106,15 +107,15 @@ export default function ProfileScreen() {
 
   const toggleNotifications = () => setNotifications(!notifications);
   const toggleLocationServices = () => setLocationServices(!locationServices);
-  
+
   const handleLogout = () => {
     Alert.alert(
       'Sair da conta',
       'Tem certeza que deseja sair?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sair', 
+        {
+          text: 'Sair',
           style: 'destructive',
           onPress: () => {
             setLoggingOut(true);
@@ -125,7 +126,31 @@ export default function ProfileScreen() {
       ]
     );
   };
-  
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Excluir conta',
+      'Tem certeza que deseja excluir sua conta permanentemente? Todos os seus dados serão apagados.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingAccount(true);
+              await deleteAccount();
+            } catch (error) {
+              console.error('Erro ao excluir conta:', error);
+              Alert.alert('Erro', 'Não foi possível excluir sua conta. Tente novamente.');
+              setDeletingAccount(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (!user) {
     return (
       <View style={styles.container}>
@@ -141,7 +166,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -159,7 +184,7 @@ export default function ProfileScreen() {
           {user?.email ? user.email.split('@')[0] : 'Usuário'}
         </Text>
         <Text style={styles.profileBio}>Enófilo e amante de vinhos</Text>
-        
+
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{savedWines.length}</Text>
@@ -177,7 +202,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </LinearGradient>
-      
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -197,18 +222,18 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {favorites.length > 0 ? (
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.favoritesContainer}
               >
                 {favorites.slice(0, 5).map((wine) => (
-                  <WineCard 
-                    key={wine.id} 
-                    wine={wine} 
-                    compact 
+                  <WineCard
+                    key={wine.id}
+                    wine={wine}
+                    compact
                     showActions
                     isFavorite={true}
                     onFavoriteChange={(isFavorite) => handleFavoriteChange(wine.id, isFavorite)}
@@ -238,18 +263,18 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {savedWines.length > 0 ? (
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.favoritesContainer}
               >
                 {savedWines.slice(0, 5).map((wine) => (
-                  <WineCard 
-                    key={wine.id} 
-                    wine={wine} 
-                    compact 
+                  <WineCard
+                    key={wine.id}
+                    wine={wine}
+                    compact
                     showActions
                     isFavorite={favorites.some(f => f.id === wine.id)}
                     onFavoriteChange={(isFavorite) => handleFavoriteChange(wine.id, isFavorite)}
@@ -268,7 +293,7 @@ export default function ProfileScreen() {
           </View>
         </>
       )}
-      
+
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
@@ -276,16 +301,16 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Configurações</Text>
           </View>
         </View>
-        
+
         <View style={styles.settingsCard}>
           <TouchableOpacity style={styles.settingsItem}>
             <UserCircle size={20} color={colors.text} />
             <Text style={styles.settingsLabel}>Editar Perfil</Text>
             <ChevronRight size={16} color={colors.textSecondary} />
           </TouchableOpacity>
-          
+
           <View style={styles.settingsDivider} />
-          
+
           <View style={styles.settingsItem}>
             <Bell size={20} color={colors.text} />
             <Text style={styles.settingsLabel}>Notificações</Text>
@@ -296,11 +321,11 @@ export default function ProfileScreen() {
               thumbColor={notifications ? colors.primary : colors.card}
             />
           </View>
-          
+
           <View style={styles.settingsDivider} />
-          
+
           <View style={styles.settingsItem}>
-            <Image 
+            <Image
               source={{ uri: 'https://images.pexels.com/photos/674783/pexels-photo-674783.jpeg' }}
               style={styles.locationIcon}
             />
@@ -312,10 +337,28 @@ export default function ProfileScreen() {
               thumbColor={locationServices ? colors.primary : colors.card}
             />
           </View>
-          
+
           <View style={styles.settingsDivider} />
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
+            style={[styles.settingsItem, deletingAccount && styles.settingsItemDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount || loggingOut}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator size={20} color="#EF4444" />
+            ) : (
+              <Trash2 size={20} color="#EF4444" />
+            )}
+            <Text style={[styles.settingsLabel, { color: '#EF4444' }]}>
+              {deletingAccount ? 'Excluindo conta...' : 'Excluir conta'}
+            </Text>
+            {!deletingAccount && <ChevronRight size={16} color={colors.textSecondary} />}
+          </TouchableOpacity>
+
+          <View style={styles.settingsDivider} />
+
+          <TouchableOpacity
             style={[styles.settingsItem, loggingOut && styles.settingsItemDisabled]}
             onPress={handleLogout}
             disabled={loggingOut}

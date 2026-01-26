@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/services/supabaseClient';
 import { useTheme } from '@/hooks/useTheme';
 import { ArrowLeft } from 'lucide-react-native';
@@ -51,7 +52,9 @@ export default function ForgotPasswordScreen() {
       setLoading(true);
       setError(null);
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: Linking.createURL('/reset-password'),
+      });
 
       if (error) throw error;
 

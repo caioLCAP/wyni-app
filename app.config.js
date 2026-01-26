@@ -6,7 +6,7 @@ module.exports = {
     slug: "wyni-app",
     version: "1.0.0",
     orientation: "portrait",
-    scheme: "myapp",
+    scheme: "wyni-app",
     userInterfaceStyle: "automatic",
     icon: "./assets/images/icon.png",
     splash: {
@@ -35,7 +35,31 @@ module.exports = {
       bundler: "metro",
       output: "single"
     },
-    plugins: ["expo-router", "expo-font", "expo-web-browser"],
+    plugins: [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "O WYNI usa sua localização para encontrar vinhos, vinícolas e eventos próximos a você, personalizando sua experiência.",
+          "locationWhenInUsePermission": "O WYNI usa sua localização para encontrar vinhos e eventos próximos enquanto você usa o app."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O WYNI precisa acessar sua galeria para que você possa importar fotos de rótulos de vinhos para análise e salvamento.",
+          "cameraPermission": "O WYNI precisa usar sua câmera para fotografar e analisar rótulos de vinhos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O WYNI precisa acessar sua câmera para escanear e identificar rótulos de vinhos em tempo real."
+        }
+      ]
+    ],
     experiments: {
       typedRoutes: true
     },

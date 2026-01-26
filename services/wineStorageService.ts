@@ -54,10 +54,10 @@ export class WineStorageService {
    */
   private formatArrayForPostgres(value: any): string[] | null {
     if (!value) return null;
-    
+
     try {
       let arrayValue: any[] = [];
-      
+
       if (Array.isArray(value)) {
         arrayValue = value;
       } else if (typeof value === 'string') {
@@ -95,7 +95,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return null;
       }
@@ -122,9 +122,9 @@ export class WineStorageService {
         if (!savedWineName) return false;
 
         // Verificar se os nomes são exatamente iguais ou muito similares
-        return savedWineName === wineName || 
-               savedWineName.includes(wineName) || 
-               wineName.includes(savedWineName);
+        return savedWineName === wineName ||
+          savedWineName.includes(wineName) ||
+          wineName.includes(savedWineName);
       });
 
       return similarWine || null;
@@ -155,7 +155,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return null;
       }
@@ -183,8 +183,8 @@ export class WineStorageService {
       if (!foundWine) {
         foundWine = data.find(wine => {
           const normalizedWineName = this.normalizeWineName(wine.wine_name || '');
-          return normalizedWineName.includes(normalizedSearchName) || 
-                 normalizedSearchName.includes(normalizedWineName);
+          return normalizedWineName.includes(normalizedSearchName) ||
+            normalizedSearchName.includes(normalizedWineName);
         });
       }
 
@@ -205,7 +205,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('Usuário não autenticado');
       }
@@ -256,17 +256,17 @@ export class WineStorageService {
 
       if (error) {
         console.error('Erro detalhado ao salvar vinho:', error);
-        
+
         // Se for erro de duplicata, buscar o vinho existente
         if (error.code === '23505') {
           console.log('Vinho duplicado detectado, buscando existente...');
           return await this.findSavedWineByName(analysis.wineName || 'Vinho Analisado');
         }
-        
+
         // Se for erro de array, tentar sem arrays
         if (error.code === '22P02' || error.message?.includes('malformed') || error.message?.includes('array')) {
           console.log('Erro de array detectado, tentando sem arrays...');
-          
+
           const wineDataWithoutArrays = {
             ...wineData,
             grape_varieties: null,
@@ -287,7 +287,7 @@ export class WineStorageService {
           console.log('Vinho salvo sem arrays:', savedWineSimple.wine_name);
           return savedWineSimple;
         }
-        
+
         throw error;
       }
 
@@ -310,7 +310,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return [];
       }
@@ -329,7 +329,7 @@ export class WineStorageService {
 
       for (const wine of (data || [])) {
         const normalizedName = this.normalizeWineName(wine.wine_name || '');
-        
+
         if (!seenNames.has(normalizedName)) {
           seenNames.add(normalizedName);
           uniqueWines.push(wine);
@@ -355,7 +355,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return [];
       }
@@ -378,9 +378,9 @@ export class WineStorageService {
 
       for (const wine of favorites) {
         if (!wine || !wine.wine_name) continue;
-        
+
         const normalizedName = this.normalizeWineName(wine.wine_name);
-        
+
         if (!seenNames.has(normalizedName)) {
           seenNames.add(normalizedName);
           uniqueFavorites.push(wine);
@@ -406,7 +406,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('Usuário não autenticado');
       }
@@ -461,7 +461,7 @@ export class WineStorageService {
           }
           throw error;
         }
-        
+
         console.log('Vinho adicionado aos favoritos');
         return true;
       }
@@ -481,7 +481,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return false;
       }
@@ -514,7 +514,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('Usuário não autenticado');
       }
@@ -526,7 +526,7 @@ export class WineStorageService {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
+
       console.log('Vinho deletado com sucesso');
     } catch (error) {
       console.error('Erro ao deletar vinho:', error);
@@ -544,7 +544,7 @@ export class WineStorageService {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return 0;
       }
@@ -566,7 +566,7 @@ export class WineStorageService {
 
       for (const wine of allWines) {
         const normalizedName = this.normalizeWineName(wine.wine_name || '');
-        
+
         if (seenNames.has(normalizedName)) {
           duplicatesToDelete.push(wine.id);
         } else {
@@ -581,7 +581,7 @@ export class WineStorageService {
           .in('id', duplicatesToDelete);
 
         if (deleteError) throw deleteError;
-        
+
         console.log(`${duplicatesToDelete.length} vinhos duplicados removidos`);
       }
 
@@ -609,6 +609,51 @@ export class WineStorageService {
       aromas: []
     }));
   };
+  /**
+   * Deleta TODOS os dados do usuário (conta sendo excluída)
+   */
+  async deleteAllUserData(): Promise<void> {
+    if (!isConfigured) {
+      throw new Error('Supabase não está configurado');
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log('Iniciando exclusão de dados do usuário:', user.id);
+
+      // 1. Deletar favoritos
+      const { error: favoritesError } = await supabase
+        .from('user_favorites')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (favoritesError) {
+        console.error('Erro ao deletar favoritos:', favoritesError);
+        throw favoritesError;
+      }
+
+      // 2. Deletar vinhos salvos
+      const { error: winesError } = await supabase
+        .from('saved_wines')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (winesError) {
+        console.error('Erro ao deletar vinhos:', winesError);
+        throw winesError;
+      }
+
+      console.log('Dados do usuário excluídos com sucesso');
+    } catch (error) {
+      console.error('Erro ao excluir dados do usuário:', error);
+      throw error;
+    }
+  }
 }
 
 export const wineStorageService = WineStorageService.getInstance();

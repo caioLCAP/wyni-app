@@ -10,15 +10,19 @@ interface AuthContextType {
   user: any;
   forceLogout: () => void;
   nuclearLogout: () => void;
+  deleteAccount: () => Promise<void>;
+  isGuest: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
-  signOut: () => {},
+  signOut: () => { },
   user: null,
-  forceLogout: () => {},
-  nuclearLogout: () => {},
+  forceLogout: () => { },
+  nuclearLogout: () => { },
+  deleteAccount: async () => { },
+  isGuest: true, // Default to guest initially safe
 });
 
 // This hook can be used to access the user info.
@@ -40,10 +44,12 @@ function useProtectedRoute(session: Session | null, loading: boolean) {
     if (session && inAuthGroup) {
       // Redirect authenticated users to home page if they're on an auth page
       router.replace('/(tabs)');
-    } else if (!session && !inAuthGroup) {
-      // Redirect unauthenticated users to login page if they're not on an auth page
-      router.replace('/login');
     }
+    // REMOVIDO: Redirecionamento forçado para login.
+    // Agora permitimos que o usuário fique sem sessão (modo visitante)
+    // else if (!session && !inAuthGroup) {
+    //   router.replace('/login');
+    // }
   }, [session, segments, rootNavigation?.isReady(), loading]);
 }
 
@@ -53,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const isMountedRef = useRef(true);
 
+  // Derivado: se não tem sessão mas carregou, é visitante
+  const isGuest = !loading && !session;
+
   useProtectedRoute(session, loading);
 
   // 🔥 MÉTODO 1: LOGOUT NORMAL (mais simples possível)
@@ -61,10 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setUser(null);
     setLoading(false);
-    
+
     // Navegar IMEDIATAMENTE
     router.replace('/login');
-    
+
     // Tentar Supabase logout em background (sem esperar)
     if (isConfigured) {
       supabase.auth.signOut().catch(() => {
@@ -79,12 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setUser(null);
     setLoading(false);
-    
+
     // Forçar navegação múltiplas vezes
     router.replace('/login');
     setTimeout(() => router.replace('/login'), 100);
     setTimeout(() => router.replace('/login'), 500);
-    
+
     // Limpar localStorage se existir
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
@@ -101,14 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setUser(null);
     setLoading(false);
-    
+
     // Se estamos na web, recarregar a página
     if (typeof window !== 'undefined') {
       try {
         // Limpar tudo
         window.localStorage?.clear();
         window.sessionStorage?.clear();
-        
+
         // Recarregar a página forçadamente
         window.location.href = '/login';
         window.location.reload();
@@ -118,6 +127,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       // Mobile - forçar navegação
       router.replace('/login');
+    }
+  };
+
+  // 🔥 MÉTODO 4: EXCLUIR CONTA
+  const deleteAccount = async () => {
+    try {
+      setLoading(true);
+      // 1. Deletar dados do usuário (storage service)
+      const { wineStorageService } = require('@/services/wineStorageService');
+      await wineStorageService.deleteAllUserData();
+
+      // 2. Fazer logout
+      signOut();
+    } catch (error) {
+      console.error('Erro ao excluir conta:', error);
+      setLoading(false);
+      throw error;
     }
   };
 
@@ -133,11 +159,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           // Error getting initial session
         }
-        
+
         if (isMountedRef.current) {
           setSession(session);
           setUser(session?.user || null);
@@ -154,14 +180,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Only set up auth listener if Supabase is configured
     let subscription: any = null;
-    
+
     if (isConfigured) {
       // Listen for auth state changes
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (isMountedRef.current) {
           setSession(session);
           setUser(session?.user || null);
-          
+
           // Handle specific events
           if (event === 'SIGNED_OUT') {
             setSession(null);
@@ -172,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       });
-      
+
       subscription = data.subscription;
     }
 
@@ -191,6 +217,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     forceLogout,
     nuclearLogout,
+    deleteAccount,
+    isGuest,
   };
 
   // Show loading state while determining auth status

@@ -3,8 +3,12 @@ const { getDefaultConfig } = require('expo/metro-config');
 const config = getDefaultConfig(__dirname);
 
 // Configure asset extensions
+// Configure asset extensions
 config.resolver.assetExts = config.resolver.assetExts.filter(ext => ext !== 'jpg');
 config.resolver.assetExts.push('jpg', 'jpeg', 'png', 'gif', 'webp', 'svg');
+
+// Add mjs support for OpenAI
+config.resolver.sourceExts.push('mjs');
 
 // Add browser-specific fallbacks for Node.js modules
 config.resolver.extraNodeModules = {

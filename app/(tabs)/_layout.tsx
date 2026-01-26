@@ -1,15 +1,31 @@
-import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native';
 import { BookOpen, Utensils as UtensilsIcon, ScanLine, User, Plus, Sun, Moon, Wine, Home } from 'lucide-react-native';
 import { router, usePathname } from 'expo-router';
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabLayout() {
   const { colors, theme, toggleTheme } = useTheme();
+  const { isGuest } = useAuth();
   const pathname = usePathname();
 
-  // Hide FAB on scanner and profile tabs
-  const shouldShowFAB = !pathname.includes('/scanner') && !pathname.includes('/profile');
+  // Hide FAB on scanner and profile tabs, and for guests
+  const shouldShowFAB = !pathname.includes('/scanner') && !pathname.includes('/profile') && !isGuest;
+
+  const handleGuestAccess = () => {
+    Alert.alert(
+      'Acesso Restrito',
+      'Para acessar esta funcionalidade, você precisa fazer login ou criar uma conta.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Fazer Login',
+          onPress: () => router.push('/login')
+        }
+      ]
+    );
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -96,25 +112,25 @@ export default function TabLayout() {
             <Text style={styles.headerSubtitle}>O vinho do seu jeito</Text>
           </View>
           <View style={styles.themeToggleContainer}>
-            <Sun 
-              size={18} 
-              color={colors.textLight} 
-              style={[styles.themeIcon, theme === 'light' && styles.activeThemeIcon]} 
+            <Sun
+              size={18}
+              color={colors.textLight}
+              style={[styles.themeIcon, theme === 'light' && styles.activeThemeIcon]}
             />
             <Switch
               value={theme === 'dark'}
               onValueChange={toggleTheme}
-              trackColor={{ 
-                false: colors.primaryLight + '40', 
-                true: colors.primaryLight + '40' 
+              trackColor={{
+                false: colors.primaryLight + '40',
+                true: colors.primaryLight + '40'
               }}
               thumbColor={colors.textLight}
               ios_backgroundColor={colors.primaryLight + '40'}
               style={styles.themeSwitch}
             />
-            <Moon 
-              size={18} 
-              color={colors.textLight} 
+            <Moon
+              size={18}
+              color={colors.textLight}
               style={[styles.themeIcon, theme === 'dark' && styles.activeThemeIcon]}
             />
           </View>
@@ -154,6 +170,14 @@ export default function TabLayout() {
             title: 'Biblioteca',
             tabBarIcon: ({ color, size }) => <Wine size={size} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => {
+              if (isGuest) {
+                e.preventDefault();
+                handleGuestAccess();
+              }
+            },
+          }}
         />
         <Tabs.Screen
           name="add-wine"
@@ -167,12 +191,28 @@ export default function TabLayout() {
             title: 'Harmonizações',
             tabBarIcon: ({ color, size }) => <UtensilsIcon size={size} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => {
+              if (isGuest) {
+                e.preventDefault();
+                handleGuestAccess();
+              }
+            },
+          }}
         />
         <Tabs.Screen
           name="scanner"
           options={{
             title: 'Scanner',
             tabBarIcon: ({ color, size }) => <ScanLine size={size} color={color} />,
+          }}
+          listeners={{
+            tabPress: (e) => {
+              if (isGuest) {
+                e.preventDefault();
+                handleGuestAccess();
+              }
+            },
           }}
         />
         <Tabs.Screen
@@ -181,9 +221,17 @@ export default function TabLayout() {
             title: 'Perfil',
             tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => {
+              if (isGuest) {
+                e.preventDefault();
+                handleGuestAccess();
+              }
+            },
+          }}
         />
       </Tabs>
-      
+
       {shouldShowFAB && (
         <TouchableOpacity
           style={styles.fab}

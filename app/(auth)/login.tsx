@@ -13,7 +13,7 @@ import {
   ImageBackground,
   Image,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { supabase, isConfigured } from '@/services/supabaseClient';
 import { useTheme } from '@/hooks/useTheme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,7 +56,7 @@ export default function LoginScreen() {
     if (error?.message?.includes('Supabase não está configurado')) {
       return 'Aplicativo não está configurado corretamente. Entre em contato com o suporte.';
     }
-    
+
     if (error?.message?.includes('Invalid login credentials')) {
       return 'E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.';
     }
@@ -328,6 +328,15 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                   </Link>
                 </View>
+
+                <TouchableOpacity
+                  style={[styles.signUpContainer, { marginTop: 24 }]}
+                  onPress={() => router.replace('/(tabs)')}
+                >
+                  <Text style={[styles.signUpText, { textDecorationLine: 'underline', opacity: 0.9 }]}>
+                    Continuar como visitante
+                  </Text>
+                </TouchableOpacity>
               </>
             ) : (
               <Animated.View style={[styles.formContainer, { opacity: formOpacity }]}>
