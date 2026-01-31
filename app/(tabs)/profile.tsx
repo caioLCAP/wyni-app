@@ -18,6 +18,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/providers/AuthProvider';
 import { wineStorageService, SavedWine } from '@/services/wineStorageService';
 import { WineType } from '@/types/wine';
+import * as ImagePicker from 'expo-image-picker';
+import { userService } from '@/services/userService';
 
 export default function ProfileScreen() {
   const { signOut, user, deleteAccount } = useAuth();
@@ -30,10 +32,22 @@ export default function ProfileScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
       loadUserData();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+      // Initialize avatar URL from user metadata
+      if (user.user_metadata?.avatar_url) {
+        setAvatarUrl(user.user_metadata.avatar_url);
+      }
     }
   }, [user]);
 
@@ -150,6 +164,44 @@ export default function ProfileScreen() {
       ]
     );
   };
+  const handleEditPhoto = async () => {
+    try {
+      // 1. Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert('Permissão necessária', 'Precisamos de permissão para acessar sua galeria de fotos.');
+        return;
+      }
+
+      // 2. Pick image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        setUploadingAvatar(true);
+
+        // 3. Upload image
+        const publicUrl = await userService.uploadAvatar(user.id, result.assets[0].uri);
+
+        if (publicUrl) {
+          setAvatarUrl(publicUrl);
+          Alert.alert('Sucesso', 'Foto de perfil atualizada com sucesso!');
+        } else {
+          Alert.alert('Erro', 'Falha ao atualizar a foto de perfil. Tente novamente.');
+        }
+      }
+    } catch (error) {
+      console.error('Error changing photo:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao selecionar a imagem.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -177,7 +229,7 @@ export default function ProfileScreen() {
         style={styles.header}
       >
         <Image
-          source={{ uri: 'https://images.pexels.com/photos/2147486/pexels-photo-2147486.jpeg' }}
+          source={{ uri: avatarUrl || 'https://images.pexels.com/photos/2147486/pexels-photo-2147486.jpeg' }}
           style={styles.profileImage}
         />
         <Text style={styles.profileName}>
@@ -303,10 +355,20 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.settingsCard}>
-          <TouchableOpacity style={styles.settingsItem}>
-            <UserCircle size={20} color={colors.text} />
-            <Text style={styles.settingsLabel}>Editar Perfil</Text>
-            <ChevronRight size={16} color={colors.textSecondary} />
+          <TouchableOpacity
+            style={[styles.settingsItem, uploadingAvatar && styles.settingsItemDisabled]}
+            onPress={handleEditPhoto}
+            disabled={uploadingAvatar}
+          >
+            {uploadingAvatar ? (
+              <ActivityIndicator size={20} color={colors.primary} />
+            ) : (
+              <UserCircle size={20} color={colors.text} />
+            )}
+            <Text style={styles.settingsLabel}>
+              {uploadingAvatar ? 'Enviando foto...' : 'Editar Foto'}
+            </Text>
+            {!uploadingAvatar && <ChevronRight size={16} color={colors.textSecondary} />}
           </TouchableOpacity>
 
           <View style={styles.settingsDivider} />

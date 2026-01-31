@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   TextInput,
   ActivityIndicator,
   Dimensions,
@@ -14,6 +14,7 @@ import {
 import { ChevronRight, Search, Wine, Filter, X, Utensils, Grape, MapPin } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { FilterChip } from '@/components/FilterChip';
+import { CollapsibleFilterSection } from '@/components/CollapsibleFilterSection';
 import { usePairings } from '@/hooks/usePairings';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -34,7 +35,7 @@ export default function PairingsScreen() {
     dietaryRestrictions: []
   });
   const [searchResults, setSearchResults] = useState([]);
-  
+
   const {
     loading,
     grapes,
@@ -104,7 +105,7 @@ export default function PairingsScreen() {
       const newValues = currentValues.includes(value)
         ? currentValues.filter(v => v !== value)
         : [...currentValues, value];
-      
+
       let updatedFilters = {
         ...prev,
         [category]: newValues
@@ -118,7 +119,7 @@ export default function PairingsScreen() {
           resetFilters();
         }
       }
-      
+
       // If selecting wine types, update available grapes
       if (category === 'wineTypes') {
         if (newValues.length > 0) {
@@ -134,7 +135,7 @@ export default function PairingsScreen() {
         // Clear selected regions when changing countries
         updatedFilters.regions = [];
       }
-      
+
       return updatedFilters;
     });
   };
@@ -142,7 +143,7 @@ export default function PairingsScreen() {
   const renderWelcomeMessage = () => (
     <View style={styles.welcomeContainer}>
       <Text style={styles.welcomeTitle}>
-        {activeTab === 'wine' 
+        {activeTab === 'wine'
           ? 'Descubra Harmonizações Perfeitas'
           : 'Encontre o Vinho Ideal'}
       </Text>
@@ -151,7 +152,7 @@ export default function PairingsScreen() {
           ? 'Explore combinações deliciosas para seus vinhos favoritos. Use os filtros para encontrar as melhores harmonizações gastronômicas.'
           : 'Descubra vinhos que combinam perfeitamente com suas receitas favoritas. Utilize os filtros para encontrar a harmonização ideal.'}
       </Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.startSearchButton}
         onPress={() => setShowFilters(true)}
       >
@@ -165,66 +166,71 @@ export default function PairingsScreen() {
     if (activeTab === 'wine') {
       return (
         <ScrollView style={styles.filtersScroll} contentContainerStyle={styles.filtersScrollContent}>
-          <Text style={styles.filterTitle}>Tipos de Vinho</Text>
-          <View style={styles.filterRow}>
-            {wineTypes.map(type => (
-              <FilterChip
-                key={type}
-                label={type}
-                selected={selectedFilters.wineTypes.includes(type)}
-                onPress={() => toggleFilter('wineTypes', type)}
-              />
-            ))}
-          </View>
+          <CollapsibleFilterSection title="Tipos de Vinho" initialExpanded={false}>
+            <View style={styles.filterRow}>
+              {wineTypes.map(type => (
+                <FilterChip
+                  key={type}
+                  label={type}
+                  selected={selectedFilters.wineTypes.includes(type)}
+                  onPress={() => toggleFilter('wineTypes', type)}
+                />
+              ))}
+            </View>
+          </CollapsibleFilterSection>
 
-          <Text style={styles.filterTitle}>Uvas</Text>
-          <View style={styles.filterRow}>
-            {grapes.map(grape => (
-              <FilterChip
-                key={grape.id}
-                label={grape.name}
-                selected={selectedFilters.grapes.includes(grape.id)}
-                onPress={() => toggleFilter('grapes', grape.id)}
-              />
-            ))}
-          </View>
+          <CollapsibleFilterSection title="Uvas">
+            <View style={styles.filterRow}>
+              {grapes.map(grape => (
+                <FilterChip
+                  key={grape.id}
+                  label={grape.name}
+                  selected={selectedFilters.grapes.includes(grape.id)}
+                  onPress={() => toggleFilter('grapes', grape.id)}
+                />
+              ))}
+            </View>
+          </CollapsibleFilterSection>
 
-          <Text style={styles.filterTitle}>Características</Text>
-          <View style={styles.filterRow}>
-            {characteristics.map(char => (
-              <FilterChip
-                key={char.id}
-                label={char.name}
-                selected={selectedFilters.characteristics.includes(char.id)}
-                onPress={() => toggleFilter('characteristics', char.id)}
-              />
-            ))}
-          </View>
+          <CollapsibleFilterSection title="Características">
+            <View style={styles.filterRow}>
+              {characteristics.map(char => (
+                <FilterChip
+                  key={char.id}
+                  label={char.name}
+                  selected={selectedFilters.characteristics.includes(char.id)}
+                  onPress={() => toggleFilter('characteristics', char.id)}
+                />
+              ))}
+            </View>
+          </CollapsibleFilterSection>
 
-          <Text style={styles.filterTitle}>Aromas</Text>
-          <View style={styles.filterRow}>
-            {aromas.map(aroma => (
-              <FilterChip
-                key={aroma.id}
-                label={aroma.name}
-                selected={selectedFilters.aromas.includes(aroma.id)}
-                onPress={() => toggleFilter('aromas', aroma.id)}
-              />
-            ))}
-          </View>
+          <CollapsibleFilterSection title="Aromas">
+            <View style={styles.filterRow}>
+              {aromas.map(aroma => (
+                <FilterChip
+                  key={aroma.id}
+                  label={aroma.name}
+                  selected={selectedFilters.aromas.includes(aroma.id)}
+                  onPress={() => toggleFilter('aromas', aroma.id)}
+                />
+              ))}
+            </View>
+          </CollapsibleFilterSection>
 
-          <Text style={styles.filterTitle}>Países</Text>
-          <View style={styles.filterRow}>
-            {countries.map(country => (
-              <FilterChip
-                key={country.id}
-                label={country.name}
-                selected={selectedFilters.countries.includes(country.id)}
-                onPress={() => toggleFilter('countries', country.id)}
-              />
-            ))}
-          </View>
-          
+          <CollapsibleFilterSection title="Países">
+            <View style={styles.filterRow}>
+              {countries.map(country => (
+                <FilterChip
+                  key={country.id}
+                  label={country.name}
+                  selected={selectedFilters.countries.includes(country.id)}
+                  onPress={() => toggleFilter('countries', country.id)}
+                />
+              ))}
+            </View>
+          </CollapsibleFilterSection>
+
           {/* Add padding at the bottom to ensure content is not hidden by the fixed button */}
           <View style={styles.bottomPadding} />
         </ScrollView>
@@ -233,42 +239,45 @@ export default function PairingsScreen() {
 
     return (
       <ScrollView style={styles.filtersScroll} contentContainerStyle={styles.filtersScrollContent}>
-        <Text style={styles.filterTitle}>Pratos</Text>
-        <View style={styles.filterRow}>
-          {(foodPairings || []).map(food => (
-            <FilterChip
-              key={food.id}
-              label={food.name}
-              selected={selectedFilters.foodNames.includes(food.name)}
-              onPress={() => toggleFilter('foodNames', food.name)}
-            />
-          ))}
-        </View>
+        <CollapsibleFilterSection title="Pratos" initialExpanded={false}>
+          <View style={styles.filterRow}>
+            {(foodPairings || []).map(food => (
+              <FilterChip
+                key={food.id}
+                label={food.name}
+                selected={selectedFilters.foodNames.includes(food.name)}
+                onPress={() => toggleFilter('foodNames', food.name)}
+              />
+            ))}
+          </View>
+        </CollapsibleFilterSection>
 
-        <Text style={styles.filterTitle}>Categorias de Comida</Text>
-        <View style={styles.filterRow}>
-          {Array.from(new Set((foodPairings || []).map(food => food.category))).map(category => (
-            <FilterChip
-              key={category}
-              label={category}
-              selected={selectedFilters.foodCategories.includes(category)}
-              onPress={() => toggleFilter('foodCategories', category)}
-            />
-          ))}
-        </View>
+        <CollapsibleFilterSection title="Categorias de Comida">
+          <View style={styles.filterRow}>
+            {Array.from(new Set((foodPairings || []).map(food => food.category))).map(category => (
+              <FilterChip
+                key={category}
+                label={category}
+                selected={selectedFilters.foodCategories.includes(category)}
+                onPress={() => toggleFilter('foodCategories', category)}
+              />
+            ))}
+          </View>
+        </CollapsibleFilterSection>
 
-        <Text style={styles.filterTitle}>Restrições Alimentares</Text>
-        <View style={styles.filterRow}>
-          {['vegano', 'vegetariano', 'sem glúten'].map(restriction => (
-            <FilterChip
-              key={restriction}
-              label={restriction}
-              selected={selectedFilters.dietaryRestrictions.includes(restriction)}
-              onPress={() => toggleFilter('dietaryRestrictions', restriction)}
-            />
-          ))}
-        </View>
-        
+        <CollapsibleFilterSection title="Restrições Alimentares">
+          <View style={styles.filterRow}>
+            {['vegano', 'vegetariano', 'sem glúten'].map(restriction => (
+              <FilterChip
+                key={restriction}
+                label={restriction}
+                selected={selectedFilters.dietaryRestrictions.includes(restriction)}
+                onPress={() => toggleFilter('dietaryRestrictions', restriction)}
+              />
+            ))}
+          </View>
+        </CollapsibleFilterSection>
+
         {/* Add padding at the bottom to ensure content is not hidden by the fixed button */}
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -277,12 +286,12 @@ export default function PairingsScreen() {
 
   if (showFilters) {
     return (
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.filterFullScreen}
       >
         <View style={styles.filterHeader}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setShowFilters(false)}
           >
@@ -314,9 +323,9 @@ export default function PairingsScreen() {
 
         <View style={styles.filterContentContainer}>
           {renderFilters()}
-          
+
           <View style={styles.filterActions}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.applyButton}
               onPress={handleApplyFilters}
             >
@@ -375,8 +384,8 @@ export default function PairingsScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.filterButton, showFilters && styles.filterButtonActive]}
           onPress={() => setShowFilters(true)}
         >
@@ -417,7 +426,7 @@ export default function PairingsScreen() {
                         <View key={id} style={styles.tag}>
                           <Text style={styles.tagText}>{food_pairing.name}</Text>
                         </View>
-                    ))}
+                      ))}
                   </View>
                 </>
               ) : (
@@ -436,7 +445,7 @@ export default function PairingsScreen() {
                         <Text style={styles.grapeName}>{grape.name}</Text>
                         <Text style={styles.grapeDescription}>{grape.description}</Text>
                       </View>
-                  ))}
+                    ))}
                 </>
               )}
             </View>
@@ -511,6 +520,8 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: colors.text,
+    height: '100%',
+    paddingVertical: 0,
   },
   filterButton: {
     width: 48,

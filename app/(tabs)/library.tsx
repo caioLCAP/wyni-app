@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TextInput, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Dimensions,
@@ -16,6 +16,7 @@ import { Search, Filter, X } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { WineCard } from '@/components/WineCard';
 import { FilterChip } from '@/components/FilterChip';
+import { CollapsibleFilterSection } from '@/components/CollapsibleFilterSection';
 import { supabase } from '@/services/supabaseClient';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -25,7 +26,7 @@ export default function LibraryScreen() {
   const [wines, setWines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Reference data
   const [grapes, setGrapes] = useState([]);
   const [allGrapes, setAllGrapes] = useState([]);
@@ -35,7 +36,7 @@ export default function LibraryScreen() {
   const [aromas, setAromas] = useState([]);
   const [characteristics, setCharacteristics] = useState([]);
   const [wineTypes, setWineTypes] = useState([]);
-  
+
   // Selected filters
   const [selectedFilters, setSelectedFilters] = useState({
     grapes: [],
@@ -64,11 +65,11 @@ export default function LibraryScreen() {
       const grapes = grapesData.data || [];
       setGrapes(grapes);
       setAllGrapes(grapes);
-      
+
       // Extract unique wine types
       const uniqueWineTypes = Array.from(new Set(grapes.map(g => g.wine_type))).filter(Boolean);
       setWineTypes(uniqueWineTypes);
-      
+
       setCountries(countriesData.data || []);
       setRegions(regionsData.data || []);
       setAllRegions(regionsData.data || []);
@@ -80,7 +81,7 @@ export default function LibraryScreen() {
   };
 
   const hasActiveFilters = () => {
-    return searchQuery.trim().length > 0 || 
+    return searchQuery.trim().length > 0 ||
       Object.values(selectedFilters).some(filters => filters.length > 0);
   };
 
@@ -126,7 +127,7 @@ export default function LibraryScreen() {
       }
 
       const { data, error } = await query;
-      
+
       if (error) throw error;
       setWines(data || []);
     } catch (error) {
@@ -167,7 +168,7 @@ export default function LibraryScreen() {
       const newValues = currentValues.includes(value)
         ? currentValues.filter(v => v !== value)
         : [...currentValues, value];
-      
+
       let updatedFilters = {
         ...prev,
         [category]: newValues
@@ -192,7 +193,7 @@ export default function LibraryScreen() {
           updatedFilters.wineTypes = [];
         }
       }
-      
+
       // If selecting wine types, update available grapes
       if (category === 'wineTypes') {
         if (newValues.length > 0) {
@@ -208,16 +209,16 @@ export default function LibraryScreen() {
         if (newValues.length === 0) {
           setRegions(allRegions);
         } else {
-          const filtered = allRegions.filter(region => 
+          const filtered = allRegions.filter(region =>
             newValues.includes(region.country?.id)
           );
           setRegions(filtered);
         }
-        
+
         // Clear selected regions when changing countries
         updatedFilters.regions = [];
       }
-      
+
       return updatedFilters;
     });
   };
@@ -228,7 +229,7 @@ export default function LibraryScreen() {
       <Text style={styles.welcomeText}>
         Explore nossa coleção de vinhos usando a barra de busca acima ou aplique filtros para encontrar o vinho perfeito para você.
       </Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.startSearchButton}
         onPress={() => setShowFilters(true)}
       >
@@ -240,12 +241,12 @@ export default function LibraryScreen() {
 
   if (showFilters) {
     return (
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.filterFullScreen}
       >
         <View style={styles.filterHeader}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setShowFilters(false)}
           >
@@ -277,84 +278,90 @@ export default function LibraryScreen() {
 
         <View style={styles.filterContentContainer}>
           <ScrollView style={styles.filtersScroll} contentContainerStyle={styles.filtersScrollContent}>
-            <Text style={styles.filterTitle}>Tipos de Vinho</Text>
-            <View style={styles.filterRow}>
-              {wineTypes.map(type => (
-                <FilterChip
-                  key={type}
-                  label={type}
-                  selected={selectedFilters.wineTypes.includes(type)}
-                  onPress={() => toggleFilter('wineTypes', type)}
-                />
-              ))}
-            </View>
+            <CollapsibleFilterSection title="Tipos de Vinho" initialExpanded={false}>
+              <View style={styles.filterRow}>
+                {wineTypes.map(type => (
+                  <FilterChip
+                    key={type}
+                    label={type}
+                    selected={selectedFilters.wineTypes.includes(type)}
+                    onPress={() => toggleFilter('wineTypes', type)}
+                  />
+                ))}
+              </View>
+            </CollapsibleFilterSection>
 
-            <Text style={styles.filterTitle}>Uvas</Text>
-            <View style={styles.filterRow}>
-              {grapes.map(grape => (
-                <FilterChip
-                  key={grape.id}
-                  label={grape.name}
-                  selected={selectedFilters.grapes.includes(grape.id)}
-                  onPress={() => toggleFilter('grapes', grape.id)}
-                />
-              ))}
-            </View>
+            <CollapsibleFilterSection title="Uvas">
+              <View style={styles.filterRow}>
+                {grapes.map(grape => (
+                  <FilterChip
+                    key={grape.id}
+                    label={grape.name}
+                    selected={selectedFilters.grapes.includes(grape.id)}
+                    onPress={() => toggleFilter('grapes', grape.id)}
+                  />
+                ))}
+              </View>
+            </CollapsibleFilterSection>
 
-            <Text style={styles.filterTitle}>Características</Text>
-            <View style={styles.filterRow}>
-              {characteristics.map(char => (
-                <FilterChip
-                  key={char.id}
-                  label={char.name}
-                  selected={selectedFilters.characteristics.includes(char.id)}
-                  onPress={() => toggleFilter('characteristics', char.id)}
-                />
-              ))}
-            </View>
+            <CollapsibleFilterSection title="Características">
+              <View style={styles.filterRow}>
+                {characteristics.map(char => (
+                  <FilterChip
+                    key={char.id}
+                    label={char.name}
+                    selected={selectedFilters.characteristics.includes(char.id)}
+                    onPress={() => toggleFilter('characteristics', char.id)}
+                  />
+                ))}
+              </View>
+            </CollapsibleFilterSection>
 
-            <Text style={styles.filterTitle}>Aromas</Text>
-            <View style={styles.filterRow}>
-              {aromas.map(aroma => (
-                <FilterChip
-                  key={aroma.id}
-                  label={aroma.name}
-                  selected={selectedFilters.aromas.includes(aroma.id)}
-                  onPress={() => toggleFilter('aromas', aroma.id)}
-                />
-              ))}
-            </View>
+            <CollapsibleFilterSection title="Aromas">
+              <View style={styles.filterRow}>
+                {aromas.map(aroma => (
+                  <FilterChip
+                    key={aroma.id}
+                    label={aroma.name}
+                    selected={selectedFilters.aromas.includes(aroma.id)}
+                    onPress={() => toggleFilter('aromas', aroma.id)}
+                  />
+                ))}
+              </View>
+            </CollapsibleFilterSection>
 
-            <Text style={styles.filterTitle}>Países</Text>
-            <View style={styles.filterRow}>
-              {countries.map(country => (
-                <FilterChip
-                  key={country.id}
-                  label={country.name}
-                  selected={selectedFilters.countries.includes(country.id)}
-                  onPress={() => toggleFilter('countries', country.id)}
-                />
-              ))}
-            </View>
+            <CollapsibleFilterSection title="Países">
+              <View style={styles.filterRow}>
+                {countries.map(country => (
+                  <FilterChip
+                    key={country.id}
+                    label={country.name}
+                    selected={selectedFilters.countries.includes(country.id)}
+                    onPress={() => toggleFilter('countries', country.id)}
+                  />
+                ))}
+              </View>
+            </CollapsibleFilterSection>
 
-            <Text style={styles.filterTitle}>Regiões</Text>
-            <View style={styles.filterRow}>
-              {regions.map(region => (
-                <FilterChip
-                  key={region.id}
-                  label={region.name}
-                  selected={selectedFilters.regions.includes(region.id)}
-                  onPress={() => toggleFilter('regions', region.id)}
-                />
-              ))}
-            </View>
+            <CollapsibleFilterSection title="Regiões">
+              <View style={styles.filterRow}>
+                {regions.map(region => (
+                  <FilterChip
+                    key={region.id}
+                    label={region.name}
+                    selected={selectedFilters.regions.includes(region.id)}
+                    onPress={() => toggleFilter('regions', region.id)}
+                  />
+                ))}
+              </View>
+            </CollapsibleFilterSection>
 
             {/* Add padding at the bottom to ensure content is not hidden by the fixed button */}
             <View style={styles.bottomPadding} />
           </ScrollView>
 
           <View style={styles.filterActions}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.applyButton}
               onPress={handleApplyFilters}
             >
@@ -384,7 +391,7 @@ export default function LibraryScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.filterButton, showFilters && styles.filterButtonActive]}
           onPress={() => setShowFilters(true)}
         >
@@ -464,6 +471,8 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: colors.text,
+    height: '100%',
+    paddingVertical: 0,
   },
   filterButton: {
     width: 48,

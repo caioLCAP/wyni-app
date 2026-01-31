@@ -6,6 +6,7 @@ import {
   Modal,
   TouchableOpacity,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { MapPin, X, Sparkles, Globe } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
@@ -20,11 +21,11 @@ interface LocationPermissionModalProps {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export function LocationPermissionModal({ 
-  visible, 
-  onAllow, 
-  onDeny, 
-  onClose 
+export function LocationPermissionModal({
+  visible,
+  onAllow,
+  onDeny,
+  onClose
 }: LocationPermissionModalProps) {
   return (
     <Modal
@@ -43,69 +44,72 @@ export function LocationPermissionModal({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <View style={styles.iconBackground}>
-              <MapPin size={48} color={colors.primary} />
-            </View>
-            <View style={styles.aiIndicator}>
-              <Sparkles size={20} color="#8B5CF6" />
-            </View>
-          </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-          <Text style={styles.title}>Recomendações Personalizadas</Text>
-          <Text style={styles.subtitle}>
-            Permita o acesso à sua localização para receber sugestões de vinhos personalizadas
-          </Text>
-
-          <View style={styles.benefitsContainer}>
-            <View style={styles.benefit}>
-              <Globe size={24} color={colors.textLight} />
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>Vinhos da sua região</Text>
-                <Text style={styles.benefitDescription}>
-                  Descubra vinhos disponíveis na sua área e produtores locais
-                </Text>
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <View style={styles.iconBackground}>
+                <MapPin size={48} color={colors.primary} />
+              </View>
+              <View style={styles.aiIndicator}>
+                <Sparkles size={20} color="#8B5CF6" />
               </View>
             </View>
 
-            <View style={styles.benefit}>
-              <Sparkles size={24} color="#8B5CF6" />
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>Sugestões inteligentes</Text>
-                <Text style={styles.benefitDescription}>
-                  IA considera seu clima, cultura e preferências regionais
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.benefit}>
-              <MapPin size={24} color={colors.textLight} />
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>Experiência local</Text>
-                <Text style={styles.benefitDescription}>
-                  Harmonizações com a culinária e tradições da sua região
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.privacyNote}>
-            <Text style={styles.privacyText}>
-              🔒 Sua localização é usada apenas para personalizar recomendações e não é compartilhada com terceiros
+            <Text style={styles.title}>Recomendações Personalizadas</Text>
+            <Text style={styles.subtitle}>
+              Permita o acesso à sua localização para receber sugestões de vinhos personalizadas
             </Text>
-          </View>
-        </View>
 
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.allowButton} onPress={onAllow}>
-            <Text style={styles.allowButtonText}>Permitir Localização</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.denyButton} onPress={onDeny}>
-            <Text style={styles.denyButtonText}>Continuar sem localização</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.benefitsContainer}>
+              <View style={styles.benefit}>
+                <Globe size={24} color={colors.textLight} />
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Vinhos da sua região</Text>
+                  <Text style={styles.benefitDescription}>
+                    Descubra vinhos disponíveis na sua área e produtores locais
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.benefit}>
+                <Sparkles size={24} color="#8B5CF6" />
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Sugestões inteligentes</Text>
+                  <Text style={styles.benefitDescription}>
+                    IA considera seu clima, cultura e preferências regionais
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.benefit}>
+                <MapPin size={24} color={colors.textLight} />
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Experiência local</Text>
+                  <Text style={styles.benefitDescription}>
+                    Harmonizações com a culinária e tradições da sua região
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.privacyNote}>
+              <Text style={styles.privacyText}>
+                🔒 Sua localização é usada apenas para personalizar recomendações e não é compartilhada com terceiros
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.actions}>
+            <TouchableOpacity style={styles.allowButton} onPress={onAllow}>
+              <Text style={styles.allowButtonText}>Permitir Localização</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.denyButton} onPress={onDeny}>
+              <Text style={styles.denyButtonText}>Continuar sem localização</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </LinearGradient>
     </Modal>
   );
@@ -126,10 +130,12 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   content: {
-    flex: 1,
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   iconContainer: {
     position: 'relative',

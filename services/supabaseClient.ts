@@ -1,17 +1,17 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 // Check if environment variables are properly configured
-const isConfigured = supabaseUrl && 
-  supabaseAnonKey && 
-  supabaseUrl !== 'https://your-project-url.supabase.co' && 
+const isConfigured = supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl !== 'https://your-project-url.supabase.co' &&
   supabaseAnonKey !== 'your-anon-key-here' &&
   supabaseUrl.includes('.supabase.co') &&
   !supabaseUrl.includes('ixqjqjqjqjqjqjqjqjqj'); // Check for placeholder URL
 
-let supabase;
+let supabase: SupabaseClient | any;
 
 if (!isConfigured) {
   // Create a mock client that will throw meaningful errors

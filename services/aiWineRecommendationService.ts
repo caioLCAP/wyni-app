@@ -61,7 +61,7 @@ export class AIWineRecommendationService {
     const today = new Date();
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
     const index = dayOfYear % conditions.length;
-    
+
     return conditions[index];
   }
 
@@ -72,7 +72,7 @@ export class AIWineRecommendationService {
     const days = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
     const today = new Date().getDay();
     const dayName = days[today];
-    
+
     const contexts = {
       0: 'domingo relaxante em família', // Sunday
       1: 'início de semana produtivo', // Monday
@@ -90,13 +90,13 @@ export class AIWineRecommendationService {
    * Create AI prompt for wine recommendations with location context
    */
   private createRecommendationPrompt(
-    weather: WeatherCondition, 
-    dayContext: string, 
+    weather: WeatherCondition,
+    dayContext: string,
     locationContext?: LocationContext | null,
     userLocation?: UserLocation | null
   ): string {
     let locationInfo = '';
-    
+
     if (locationContext && userLocation) {
       locationInfo = `
 CONTEXTO DE LOCALIZAÇÃO:
@@ -173,37 +173,37 @@ IMPORTANTE:
 - Considere vinhos sul-americanos (Argentina, Chile, Uruguai)
 - Harmonizações com culinária brasileira
 - Faixas de preço adequadas ao mercado brasileiro`,
-      
+
       europe: `
 - Enfoque em vinhos europeus tradicionais
 - Considere vinhos locais da região
 - Harmonizações com culinária mediterrânea/europeia
 - Vinhos com história e tradição`,
-      
+
       northAmerica: `
 - Inclua vinhos americanos (Napa, Sonoma)
 - Considere vinhos do Novo Mundo
 - Harmonizações com culinária americana/internacional
 - Vinhos inovadores e modernos`,
-      
+
       southAmerica: `
 - Prefira vinhos sul-americanos
 - Destaque para Argentina e Chile
 - Harmonizações com culinária latina
 - Vinhos com boa relação custo-benefício`,
-      
+
       asia: `
 - Vinhos que harmonizam com culinária asiática
 - Considere vinhos leves e frescos
 - Espumantes e brancos aromáticos
 - Vinhos com perfil mais delicado`,
-      
+
       oceania: `
 - Destaque para vinhos australianos e neozelandeses
 - Vinhos do Novo Mundo
 - Harmonizações com culinária oceânica
 - Vinhos frescos e frutados`,
-      
+
       africa: `
 - Considere vinhos sul-africanos
 - Vinhos que harmonizam com clima quente
@@ -251,7 +251,7 @@ IMPORTANTE:
             .from('countries')
             .select('id')
             .in('name', preferredCountries);
-          
+
           if (countryData && countryData.length > 0) {
             const countryIds = countryData.map(c => c.id);
             query = query.in('origin_country_id', countryIds);
@@ -300,25 +300,25 @@ IMPORTANTE:
       // Get user location and context
       const userLocation = await locationService.getCurrentLocation();
       const locationContext = locationService.getLocationContext();
-      
+
       const weather = this.getCurrentWeatherCondition();
       const dayContext = this.getDayContext();
-      
+
       // Try to get AI recommendations first
       try {
         const prompt = this.createRecommendationPrompt(weather, dayContext, locationContext, userLocation);
         const aiResponse = await openaiService.analyzeWineLabel(prompt);
-        
+
         if (aiResponse) {
           // Parse AI response and convert to our format
           const recommendations = await this.parseAIRecommendations(
-            aiResponse, 
-            weather, 
-            dayContext, 
-            locationContext, 
+            aiResponse,
+            weather,
+            dayContext,
+            locationContext,
             userLocation
           );
-          
+
           if (recommendations.length > 0) {
             this.cachedRecommendations = recommendations;
             this.lastRecommendationDate = today;
@@ -331,14 +331,14 @@ IMPORTANTE:
 
       // Fallback to database recommendations with location context
       const fallbackRecommendations = await this.getFallbackRecommendations(
-        weather, 
-        dayContext, 
-        locationContext, 
+        weather,
+        dayContext,
+        locationContext,
         userLocation
       );
       this.cachedRecommendations = fallbackRecommendations;
       this.lastRecommendationDate = today;
-      
+
       return fallbackRecommendations;
 
     } catch (error) {
@@ -350,19 +350,19 @@ IMPORTANTE:
    * Parse AI response into our recommendation format with location context
    */
   private async parseAIRecommendations(
-    aiResponse: any, 
-    weather: WeatherCondition, 
+    aiResponse: any,
+    weather: WeatherCondition,
     dayContext: string,
     locationContext?: LocationContext | null,
     userLocation?: UserLocation | null
   ): Promise<DailyWineRecommendation[]> {
     const recommendations: DailyWineRecommendation[] = [];
     const today = this.getTodayString();
-    
+
     try {
       // Handle both array and single object responses
       let wineData = [];
-      
+
       if (aiResponse.recommendations && Array.isArray(aiResponse.recommendations)) {
         wineData = aiResponse.recommendations;
       } else if (Array.isArray(aiResponse)) {
@@ -370,10 +370,10 @@ IMPORTANTE:
       } else {
         wineData = [aiResponse];
       }
-      
+
       wineData.forEach((wine, index) => {
         let aiReason = wine.whyToday || `Perfeito para este ${dayContext} com ${weather.description.toLowerCase()}`;
-        
+
         // Add location context to the reason
         if (locationContext && userLocation) {
           const locationReason = this.generateLocationReason(wine, locationContext, userLocation);
@@ -383,11 +383,11 @@ IMPORTANTE:
         // Determine the best name to display
         let displayName = '';
         let grapeInfo = '';
-        
+
         if (wine.wineName && wine.wineName.trim()) {
           // Use the full wine name if available
           displayName = wine.wineName;
-          grapeInfo = wine.grapeVarieties && wine.grapeVarieties.length > 0 
+          grapeInfo = wine.grapeVarieties && wine.grapeVarieties.length > 0
             ? wine.grapeVarieties.join(', ')
             : wine.wineName;
         } else if (wine.grapeVarieties && wine.grapeVarieties.length > 0) {
@@ -423,14 +423,14 @@ IMPORTANTE:
           aromas: wine.aromas || ['Frutas', 'Especiarias'],
           aiReason
         };
-        
+
         recommendations.push(recommendation);
       });
-      
+
     } catch (parseError) {
       // Error parsing AI recommendations
     }
-    
+
     return recommendations;
   }
 
@@ -438,13 +438,13 @@ IMPORTANTE:
    * Generate location-specific reason for wine recommendation
    */
   private generateLocationReason(
-    wine: any, 
-    locationContext: LocationContext, 
+    wine: any,
+    locationContext: LocationContext,
     userLocation: UserLocation
   ): string {
     const city = userLocation.city || 'sua cidade';
     const country = userLocation.country || 'sua região';
-    
+
     let reason = '';
 
     // Add climate-specific reason
@@ -493,20 +493,20 @@ IMPORTANTE:
    * Get fallback recommendations from database with location context
    */
   private async getFallbackRecommendations(
-    weather: WeatherCondition, 
+    weather: WeatherCondition,
     dayContext: string,
     locationContext?: LocationContext | null,
     userLocation?: UserLocation | null
   ): Promise<DailyWineRecommendation[]> {
     const dbWines = await this.getWinesFromDatabase(locationContext);
-    
+
     if (dbWines.length === 0) {
       return this.getStaticFallbackRecommendations();
     }
 
     // Filter wines based on weather, season, and climate
     let filteredWines = this.filterWinesByContext(dbWines, weather, locationContext);
-    
+
     // If no matches, use all wines
     if (filteredWines.length === 0) {
       filteredWines = dbWines;
@@ -514,14 +514,14 @@ IMPORTANTE:
 
     // Select 3 random wines
     const selectedWines = this.shuffleArray(filteredWines).slice(0, 3);
-    
+
     return selectedWines.map((wine, index) => {
       const currentYear = new Date().getFullYear();
       const randomYear = Math.floor(Math.random() * 10) + (currentYear - 15);
       const randomPrice = this.generateRegionalPrice(locationContext);
 
       let aiReason = this.generateReasonForWine(wine, weather, dayContext);
-      
+
       // Add location context
       if (locationContext && userLocation) {
         const locationReason = this.generateLocationReason(wine, locationContext, userLocation);
@@ -529,7 +529,7 @@ IMPORTANTE:
       }
 
       // Get region information from the wine data
-      const regionInfo = wine.regions && wine.regions.length > 0 
+      const regionInfo = wine.regions && wine.regions.length > 0
         ? `${wine.regions[0].name}, ${wine.regions[0].country?.name || wine.country?.name}`
         : wine.country?.name || 'Região Especial';
 
@@ -556,8 +556,8 @@ IMPORTANTE:
    * Filter wines based on weather and location context
    */
   private filterWinesByContext(
-    wines: any[], 
-    weather: WeatherCondition, 
+    wines: any[],
+    weather: WeatherCondition,
     locationContext?: LocationContext | null
   ): any[] {
     let filtered = wines;
@@ -566,7 +566,7 @@ IMPORTANTE:
     switch (weather.condition) {
       case 'sunny':
       case 'hot':
-        filtered = wines.filter(w => 
+        filtered = wines.filter(w =>
           w.wine_type === 'Vinho Branco' || w.wine_type === 'Vinho Rosé' || w.wine_type === 'Espumante'
         );
         break;
@@ -585,15 +585,15 @@ IMPORTANTE:
         case 'tropical':
         case 'subtropical':
           // Prefer lighter wines in hot climates
-          filtered = filtered.filter(w => 
-            w.wine_type !== 'Vinho Tinto' || 
+          filtered = filtered.filter(w =>
+            w.wine_type !== 'Vinho Tinto' ||
             w.characteristics?.some(c => c.characteristic.name.includes('Leve'))
           );
           break;
         case 'continental':
           // Prefer fuller-bodied wines in continental climates
-          filtered = filtered.filter(w => 
-            w.wine_type === 'Vinho Tinto' || 
+          filtered = filtered.filter(w =>
+            w.wine_type === 'Vinho Tinto' ||
             w.characteristics?.some(c => c.characteristic.name.includes('Encorpado'))
           );
           break;
@@ -617,7 +617,7 @@ IMPORTANTE:
       africa: { min: 45, max: 350 }
     };
 
-    const priceRange = locationContext 
+    const priceRange = locationContext
       ? basePrices[locationContext.culturalRegion] || basePrices.brazil
       : basePrices.brazil;
 
@@ -673,7 +673,7 @@ IMPORTANTE:
         year: '2021',
         rating: 4.6,
         price: 'R$ 380,00',
-        imageUrl: 'https://images.pexels.com/photos/6402819/pexels-photo-6402819.jpeg',
+        imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
         description: 'Chardonnay mineral e elegante da Borgonha. O solo calcário de Chablis confere mineralidade única.',
         grapes: 'Chardonnay',
         characteristics: ['Mineral', 'Fresco', 'Elegante'],
@@ -689,7 +689,7 @@ IMPORTANTE:
         year: '2012',
         rating: 4.9,
         price: 'R$ 1.950,00',
-        imageUrl: 'https://images.pexels.com/photos/6402819/pexels-photo-6402819.jpeg',
+        imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
         description: 'O champagne mais icônico do mundo. O terroir de Champagne e o método tradicional criam bolhas perfeitas.',
         grapes: 'Chardonnay, Pinot Noir',
         characteristics: ['Elegante', 'Complexo', 'Refinado'],

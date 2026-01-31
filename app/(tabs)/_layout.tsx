@@ -10,8 +10,8 @@ export default function TabLayout() {
   const { isGuest } = useAuth();
   const pathname = usePathname();
 
-  // Hide FAB on scanner and profile tabs, and for guests
-  const shouldShowFAB = !pathname.includes('/scanner') && !pathname.includes('/profile') && !isGuest;
+  // Show FAB only on home tab and for non-guests
+  const shouldShowFAB = (pathname === '/' || pathname === '/(tabs)') && !isGuest;
 
   const handleGuestAccess = () => {
     Alert.alert(
