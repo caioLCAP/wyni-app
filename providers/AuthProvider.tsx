@@ -40,9 +40,11 @@ function useProtectedRoute(session: Session | null, loading: boolean) {
     if (loading || !rootNavigation?.isReady()) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isResetPassword = segments.includes('reset-password');
 
-    if (session && inAuthGroup) {
-      // Redirect authenticated users to home page if they're on an auth page
+    if (session && inAuthGroup && !isResetPassword) {
+      // Redirect authenticated users to home page if they're on an auth page,
+      // EXCEPT if they are resetting their password.
       router.replace('/(tabs)');
     }
     // REMOVIDO: Redirecionamento forçado para login.
@@ -193,8 +195,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(null);
             setUser(null);
             router.replace('/login');
-          } else if (event === 'SIGNED_IN' && session) {
-            router.replace('/(tabs)');
+          }
+          // REMOVED to prevent conflict with password reset flow. 
+          // useProtectedRoute handles the redirect to Home.
+          /* else if (event === 'SIGNED_IN' && session) {
+             router.replace('/(tabs)');
+          } */
+          else if (event === 'PASSWORD_RECOVERY') {
+            // Handle password recovery event explicitly if needed, but for now we just want to ensure we don't redirect away
           }
         }
       });

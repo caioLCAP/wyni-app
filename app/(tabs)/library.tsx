@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   Dimensions,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { Search, Filter, X } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
+import { useTheme } from '@/hooks/useTheme';
 import { WineCard } from '@/components/WineCard';
 import { FilterChip } from '@/components/FilterChip';
 import { CollapsibleFilterSection } from '@/components/CollapsibleFilterSection';
@@ -22,23 +24,31 @@ import { supabase } from '@/services/supabaseClient';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function LibraryScreen() {
+  const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [wines, setWines] = useState([]);
+  const [wines, setWines] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // Reference data
-  const [grapes, setGrapes] = useState([]);
-  const [allGrapes, setAllGrapes] = useState([]);
-  const [countries, setCountries] = useState([]);
-  const [regions, setRegions] = useState([]);
-  const [allRegions, setAllRegions] = useState([]);
-  const [aromas, setAromas] = useState([]);
-  const [characteristics, setCharacteristics] = useState([]);
-  const [wineTypes, setWineTypes] = useState([]);
+  const [grapes, setGrapes] = useState<any[]>([]);
+  const [allGrapes, setAllGrapes] = useState<any[]>([]);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [regions, setRegions] = useState<any[]>([]);
+  const [allRegions, setAllRegions] = useState<any[]>([]);
+  const [aromas, setAromas] = useState<any[]>([]);
+  const [characteristics, setCharacteristics] = useState<any[]>([]);
+  const [wineTypes, setWineTypes] = useState<any[]>([]);
 
   // Selected filters
-  const [selectedFilters, setSelectedFilters] = useState({
+  const [selectedFilters, setSelectedFilters] = useState<{
+    grapes: any[];
+    countries: any[];
+    regions: any[];
+    aromas: any[];
+    characteristics: any[];
+    wineTypes: any[];
+  }>({
     grapes: [],
     countries: [],
     regions: [],
@@ -138,12 +148,15 @@ export default function LibraryScreen() {
   };
 
   const handleApplyFilters = () => {
-    setShowFilters(false);
-    if (hasActiveFilters()) {
-      handleSearch();
-    } else {
-      setWines([]);
+    if (!searchQuery && !hasActiveFilters()) {
+      Alert.alert(
+        'Nenhum filtro selecionado',
+        'Por favor, selecione pelo menos um filtro ou digite um termo de busca.'
+      );
+      return;
     }
+    setShowFilters(false);
+    handleSearch();
   };
 
   const clearFilters = () => {
@@ -258,23 +271,7 @@ export default function LibraryScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchBarContainer}>
-          <View style={styles.searchBar}>
-            <Search size={20} color={colors.text} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar por nome, tipo, região..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textSecondary}
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <X size={20} color={colors.text} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
+
 
         <View style={styles.filterContentContainer}>
           <ScrollView style={styles.filtersScroll} contentContainerStyle={styles.filtersScrollContent}>
@@ -375,29 +372,23 @@ export default function LibraryScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color={colors.text} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por nome, tipo, região..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor={colors.textSecondary}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={20} color={colors.text} />
-            </TouchableOpacity>
-          ) : null}
+      {hasActiveFilters() && (
+        <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.searchButton, { backgroundColor: colors.card }]}
+            onPress={() => setShowFilters(true)}
+          >
+            <View style={styles.searchPlaceholder}>
+              <Text style={[styles.searchPlaceholderText, { color: colors.textSecondary }]}>
+                Buscar vinhos...
+              </Text>
+            </View>
+            <View style={[styles.filterIconBadge, { backgroundColor: colors.primary + '10' }]}>
+              <Filter size={18} color={colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.filterButton, showFilters && styles.filterButtonActive]}
-          onPress={() => setShowFilters(true)}
-        >
-          <Filter size={20} color={showFilters ? colors.primary : colors.text} />
-        </TouchableOpacity>
-      </View>
+      )}
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -450,7 +441,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    zIndex: 10, // Ensure it's on top
+    backgroundColor: 'transparent', // Let parent bg show through
   },
   searchBarContainer: {
     padding: 16,
@@ -466,13 +458,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
   },
+  searchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  searchPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchPlaceholderText: {
+    fontSize: 16,
+  },
+  filterIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: colors.text,
     height: '100%',
-    paddingVertical: 0,
+    minHeight: 40, // Ensure minimum tappable area
+    paddingVertical: 8, // Add padding for easier tapping
   },
   filterButton: {
     width: 48,

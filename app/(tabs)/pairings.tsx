@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   Dimensions,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { ChevronRight, Search, Wine, Filter, X, Utensils, Grape, MapPin } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
+import { useTheme } from '@/hooks/useTheme';
 import { FilterChip } from '@/components/FilterChip';
 import { CollapsibleFilterSection } from '@/components/CollapsibleFilterSection';
 import { usePairings } from '@/hooks/usePairings';
@@ -20,10 +22,21 @@ import { usePairings } from '@/hooks/usePairings';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function PairingsScreen() {
+  const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState('wine');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState({
+  const [selectedFilters, setSelectedFilters] = useState<{
+    grapes: any[];
+    wineTypes: any[];
+    countries: any[];
+    regions: any[];
+    characteristics: any[];
+    aromas: any[];
+    foodCategories: any[];
+    foodNames: any[];
+    dietaryRestrictions: any[];
+  }>({
     grapes: [],
     wineTypes: [],
     countries: [],
@@ -34,7 +47,8 @@ export default function PairingsScreen() {
     foodNames: [],
     dietaryRestrictions: []
   });
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const {
     loading,
@@ -56,9 +70,10 @@ export default function PairingsScreen() {
     return Object.values(selectedFilters).some(filters => filters.length > 0) || searchQuery.trim().length > 0;
   };
 
-  const handleApplyFilters = async () => {
-    setShowFilters(false);
-    if (hasActiveFilters()) {
+  // New function to encapsulate the search logic
+  const handleSearch = async () => {
+    try {
+      setIsSearching(true); // Use local loading state for search
       const results = await searchPairings({
         search: searchQuery,
         grapeIds: selectedFilters.grapes,
@@ -72,9 +87,23 @@ export default function PairingsScreen() {
         regionIds: selectedFilters.regions
       });
       setSearchResults(results || []);
-    } else {
-      setSearchResults([]);
+    } catch (error) {
+      console.error('Error searching pairings:', error);
+    } finally {
+      setIsSearching(false); // Reset local loading state
     }
+  };
+
+  const handleApplyFilters = () => {
+    if (!searchQuery && !hasActiveFilters()) {
+      Alert.alert(
+        'Nenhum filtro selecionado',
+        'Por favor, selecione pelo menos um filtro ou digite um termo de busca.'
+      );
+      return;
+    }
+    setShowFilters(false);
+    handleSearch();
   };
 
   const clearFilters = () => {
@@ -290,36 +319,42 @@ export default function PairingsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.filterFullScreen}
       >
-        <View style={styles.filterHeader}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setShowFilters(false)}
-          >
-            <X size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.filterHeaderTitle}>Filtros</Text>
-          <TouchableOpacity onPress={clearFilters}>
-            <Text style={styles.clearText}>Limpar</Text>
-          </TouchableOpacity>
+
+        <View style={styles.tabsContainer}>
+          {tabs.map(tab => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tabButton,
+                activeTab === tab.id && styles.activeTabButton
+              ]}
+              onPress={() => {
+                setActiveTab(tab.id);
+                // The main screen does clearFilters(). Let's keep consistency.
+                clearFilters();
+              }}
+            >
+              <tab.icon
+                size={20}
+                color={activeTab === tab.id ? colors.primary : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab.id && styles.activeTabText
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <View style={styles.searchBarContainer}>
-          <View style={styles.searchBar}>
-            <Search size={20} color={colors.text} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={activeTab === 'wine' ? "Buscar vinhos..." : "Buscar pratos..."}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textSecondary}
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <X size={20} color={colors.text} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
+        <TouchableOpacity onPress={clearFilters} style={styles.clearFilterButton}>
+          <Text style={styles.clearText}>Limpar filtros</Text>
+        </TouchableOpacity>
+
+
 
         <View style={styles.filterContentContainer}>
           {renderFilters()}
@@ -368,30 +403,23 @@ export default function PairingsScreen() {
         ))}
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color={colors.text} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={activeTab === 'wine' ? "Buscar vinhos..." : "Buscar pratos..."}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor={colors.textSecondary}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={20} color={colors.text} />
-            </TouchableOpacity>
-          ) : null}
+      {hasActiveFilters() && (
+        <View style={[styles.searchContainer]}>
+          <TouchableOpacity
+            style={[styles.searchButton, { backgroundColor: colors.card }]}
+            onPress={() => setShowFilters(true)}
+          >
+            <View style={styles.searchPlaceholder}>
+              <Text style={[styles.searchPlaceholderText, { color: colors.textSecondary }]}>
+                {activeTab === 'wine' ? "Buscar vinhos e filtros..." : "Buscar pratos e filtros..."}
+              </Text>
+            </View>
+            <View style={[styles.filterIconBadge, { backgroundColor: colors.primary + '10' }]}>
+              <Filter size={18} color={colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={[styles.filterButton, showFilters && styles.filterButtonActive]}
-          onPress={() => setShowFilters(true)}
-        >
-          <Filter size={20} color={showFilters ? colors.primary : colors.text} />
-        </TouchableOpacity>
-      </View>
+      )}
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -497,31 +525,54 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: colors.background,
     flexDirection: 'row',
     gap: 8,
+    zIndex: 10,
   },
   searchBarContainer: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    zIndex: 10,
   },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 48,
+  },
+  searchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  searchPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchPlaceholderText: {
+    fontSize: 16,
+  },
+  filterIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: colors.text,
     height: '100%',
-    paddingVertical: 0,
+    minHeight: 40,
+    paddingVertical: 8,
   },
   filterButton: {
     width: 48,
@@ -728,5 +779,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+  clearFilterButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 8,
   },
 });

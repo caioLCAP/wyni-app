@@ -17,43 +17,15 @@ export class UserService {
         try {
             console.log('Iniciando upload do avatar...');
 
-            // 1. Verificar/Criar bucket 'avatars'
-            console.log('Verificando buckets existentes...');
-            const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-
-            if (listError) {
-                console.error('Erro ao listar buckets:', listError);
-            } else {
-                console.log('Buckets encontrados:', buckets?.map(b => b.name).join(', '));
-            }
-
-            const avatarBucket = buckets?.find(b => b.name === 'avatars');
-
-            if (!avatarBucket) {
-                console.log('Bucket "avatars" não encontrado. Tentando criar...');
-                const { error: createBucketError } = await supabase.storage.createBucket('avatars', {
-                    public: true,
-                    fileSizeLimit: 1024 * 1024 * 5, // 5MB
-                    allowedMimeTypes: ['image/jpeg', 'image/png']
-                });
-
-                if (createBucketError) {
-                    console.error('Erro ao tentar criar bucket "avatars":', createBucketError);
-                    if (createBucketError.message && createBucketError.message.includes('new row violates row-level security')) {
-                        console.error('ERRO CRÍTICO: Você precisa criar o bucket "avatars" publicamente no painel do Supabase.');
-                    }
-                } else {
-                    console.log('Bucket "avatars" criado com sucesso!');
-                }
-            }
-
-            // 2. Definir caminho do arquivo
+            // 1. Definir caminho do arquivo
+            // Usamos apenas o ID e o timestamp. Não precisamos adicionar 'avatars/' no início
+            // pois o método .from('avatars') já seleciona o bucket correto.
             const fileName = `${userId}/${Date.now()}.jpg`;
-            const filePath = `avatars/${fileName}`;
+            const filePath = `${fileName}`;
 
             console.log('Fazendo upload para:', filePath);
 
-            // 2. Converter URI para ArrayBuffer (mais robusto que Blob direto)
+            // 2. Converter URI para ArrayBuffer (mais robusto que Blob direto em React Native)
             const response = await fetch(imageUri);
             const blob = await response.blob();
             const arrayBuffer = await new Response(blob).arrayBuffer();
@@ -77,14 +49,14 @@ export class UserService {
                 throw uploadError;
             }
 
-            // 5. Obter URL pública
+            // 4. Obter URL pública
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(filePath);
 
             console.log('Upload concluído. URL:', publicUrl);
 
-            // 6. Atualizar metadados do usuário
+            // 5. Atualizar metadados do usuário
             const { error: updateError } = await supabase.auth.updateUser({
                 data: { avatar_url: publicUrl }
             });

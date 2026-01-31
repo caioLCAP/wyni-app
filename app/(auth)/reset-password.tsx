@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true); // Novo estado para controlar a verificação inicial
+  const processedRef = useRef(false);
 
   useEffect(() => {
     // 1. Ouve mudanças na autenticação (caso o setSession funcione)
@@ -42,6 +43,10 @@ export default function ResetPasswordScreen() {
         }
         return;
       }
+
+      // Evita processamento duplo do mesmo link (comum em dev/concurrency)
+      if (processedRef.current) return;
+      processedRef.current = true;
 
       console.log('Processando link:', url);
 
@@ -75,31 +80,66 @@ export default function ResetPasswordScreen() {
             return;
           }
 
-          if (params.access_token && params.refresh_token) {
+          if (params.code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+            if (error) {
+              console.log('Erro exchangeCodeForSession:', error);
+
+              // Verifica se, apesar do erro, temos sessão (ex: race condition)
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
+                setVerifying(false); // Silently succeed
+                return;
+              }
+
+              Alert.alert('Link Inválido', 'Não foi possível validar o código de recuperação.');
+            } else {
+              Alert.alert('Sucesso', 'Sessão recuperada. Defina sua nova senha.', [
+                { text: 'OK', onPress: () => setVerifying(false) }
+              ]);
+            }
+          } else if (params.access_token && params.refresh_token) {
             const { error } = await supabase.auth.setSession({
               access_token: params.access_token,
               refresh_token: params.refresh_token,
             });
-            
+
             if (error) {
               console.log('Erro setSession:', error);
-              Alert.alert('Link Expirado', 'Este link já foi usado ou expirou. Solicite um novo.');
+              // Check if session exists anyway
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
+                setVerifying(false);
+                return;
+              }
+
+              Alert.alert('Link Expirado', 'Este link já foi usado ou expirou. Solicite um novo.', [
+                { text: 'OK', onPress: () => setVerifying(false) }
+              ]);
             } else {
-              // Sucesso: o onAuthStateChange vai cuidar de setVerifying(false)
-              Alert.alert('Sucesso', 'Sessão recuperada. Defina sua nova senha.');
+              Alert.alert('Sucesso', 'Sessão recuperada. Defina sua nova senha.', [
+                { text: 'OK', onPress: () => setVerifying(false) }
+              ]);
             }
+          } else {
+            console.log('Parâmetros não encontrados na URL:', params);
+            setVerifying(false);
           }
         }
       } catch (error) {
         console.log('Erro ao recuperar sessão:', error);
-      } finally {
-        // Garante que o loading pare em caso de erro de parse
         setVerifying(false);
       }
+      // Removed finally block to rely on explicit setVerifying calls or Alert callbacks
+      // finally {
+      //   setVerifying(false);
+      // }
     };
 
     // 1. Verifica se o app abriu do zero (Cold Start)
-    Linking.getInitialURL().then(handleDeepLink);
+    Linking.getInitialURL().then((url) => {
+      handleDeepLink(url);
+    });
 
     // 2. Verifica se o app já estava aberto e recebeu o link (Warm Start)
     const subscription = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
@@ -128,14 +168,14 @@ export default function ResetPasswordScreen() {
 
     try {
       setLoading(true);
-      
+
       // Verifica se a sessão foi estabelecida corretamente antes de tentar atualizar
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         Alert.alert('Sessão não encontrada', 'O link não autenticou corretamente. Tente solicitar um novo e-mail.');
         return;
       }
-      
+
       // Atualiza a senha do usuário logado (o link de recuperação já faz o login automaticamente)
       const { error } = await supabase.auth.updateUser({
         password: password

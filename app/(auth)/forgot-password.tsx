@@ -52,8 +52,11 @@ export default function ForgotPasswordScreen() {
       setLoading(true);
       setError(null);
 
+      const redirectUrl = Linking.createURL('/reset-password');
+      console.log('Password Reset Redirect URL:', redirectUrl);
+
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: Linking.createURL('/reset-password'),
+        redirectTo: redirectUrl,
       });
 
       if (error) throw error;
