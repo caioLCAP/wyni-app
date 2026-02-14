@@ -57,7 +57,7 @@ export class OpenAIService {
       const prompt = this.createWineAnalysisPrompt(extractedText);
 
       const completion = await this.openai!.chat.completions.create({
-        model: "gpt-4o-mini", // Modelo mais econômico e eficiente
+        model: "gpt-4o", // Modelo mais capaz para melhor precisão e raciocínio
         messages: [
           {
             role: "system",
@@ -105,41 +105,42 @@ export class OpenAIService {
    */
   private createWineAnalysisPrompt(extractedText: string): string {
     return `
-Analise o seguinte texto extraído de um rótulo de vinho e forneça informações detalhadas em formato JSON:
+Analise o seguinte texto extraído de um rótulo de vinho e atue como um Sommelier Expert para identificar o vinho.
 
 TEXTO DO RÓTULO:
 "${extractedText}"
 
-Por favor, extraia e forneça as seguintes informações em formato JSON válido:
+SEU OBJETIVO:
+Identificar o vinho com precisão baseada APENAS nas informações presentes.
 
+DIRETRIZES RÍGIDAS - NÃO INVENTE DADOS:
+1. IDENTIFICAÇÃO: Extraia Nome, Vinícola, Safra e Região do texto.
+2. ENRIQUECIMENTO FACTUAL (Permitido): Se você identificar o vinho com certeza (ex: "Brunello di Montalcino"), você PODE preencher informações que são fatos absolutos (ex: Uva "Sangiovese"), mesmo que não estejam no texto.
+3. NÃO INVENTE:
+   - Não chute o teor alcoólico se não estiver escrito.
+   - Não invente uma safra se não estiver escrita.
+   - Não invente nome de vinícola se não estiver claro.
+   - PREÇO: Estime uma faixa de mercado REALISTA para o Brasil.
+
+FORMATO JSON ESPERADO:
 {
-  "wineName": "Nome do vinho",
-  "winery": "Nome da vinícola/produtor",
-  "vintage": "Ano da safra (formato YYYY)",
-  "region": "Região vinícola específica",
-  "country": "País de origem",
-  "grapeVarieties": ["Lista de castas/uvas identificadas"],
-  "alcoholContent": "Teor alcoólico (ex: 13.5%)",
-  "wineType": "Tipo do vinho (Tinto, Branco, Rosé, Espumante, etc.)",
-  "tastingNotes": "Notas de degustação e características organolépticas",
-  "foodPairings": ["Sugestões de harmonização gastronômica"],
-  "priceRange": "Faixa de preço estimada (ex: R$ 50-100)",
-  "description": "Descrição geral do vinho e suas características"
+  "wineName": "Nome comercial identificado",
+  "winery": "Produtor (se identificado)",
+  "vintage": "Ano (apenas se explícito)",
+  "region": "Região e País",
+  "country": "País",
+  "grapeVarieties": ["Uva 1", "Uva 2"],
+  "alcoholContent": "Teor % (apenas se explícito, senão null)",
+  "wineType": "Tipo (Tinto, Branco, Rosé, Espumante)",
+  "tastingNotes": "Características sensoriais TÍPICAS deste vinho/uva.",
+  "foodPairings": ["Harmonizações clássicas para este vinho"],
+  "priceRange": "Faixa de preço estimada R$",
+  "description": "Breve descrição sobre o vinho ou produtor."
 }
 
-INSTRUÇÕES IMPORTANTES:
-1. Responda SEMPRE em Português do Brasil (pt-BR).
-2. Se uma informação não for encontrada ou identificada:
-   - Para campos de texto (string), preencha com "Informação não encontrada" (NUNCA use "Unknown", "N/A" ou null).
-   - Para listas (arrays), retorne uma lista contendo apenas ["Informação não encontrada"].
-3. Para vinhos conhecidos, use seu conhecimento para preencher dados faltantes (mas se ainda assim não souber, use a regra 2).
-4. Seja específico sobre regiões vinícolas (ex: "Bordeaux" ao invés de apenas "França").
-5. Inclua castas típicas da região se não estiverem explícitas no rótulo.
-6. Forneça harmonizações gastronômicas apropriadas para o tipo de vinho.
-7. Estime uma faixa de preço realista baseada na qualidade e origem.
-8. NUNCA invente dados aleatórios se não tiver certeza (use "Informação não encontrada").
-
-Responda APENAS com o JSON válido, sem texto adicional.
+REGRAS FINAIS:
+- Responda SEMPRE em Português do Brasil.
+- Se uma informação não for encontrada e não for um fato enciclopédico atrelado ao vinho identificado, use "Não identificado".
     `;
   }
 
@@ -152,8 +153,8 @@ Responda APENAS com o JSON válido, sem texto adicional.
       ...analysis
     };
 
-    // Enriquecer com informações padrão se necessário
-    if (validated.wineType && !validated.foodPairings?.length) {
+    // Enriquecer com informações padrão APENAS se o tipo for conhecido
+    if (validated.wineType && (!validated.foodPairings?.length || validated.foodPairings[0] === "Informação não encontrada" || validated.foodPairings[0] === "Não identificado")) {
       validated.foodPairings = this.getDefaultFoodPairings(validated.wineType);
     }
 
@@ -161,16 +162,20 @@ Responda APENAS com o JSON válido, sem texto adicional.
     if (validated.vintage) {
       const year = parseInt(validated.vintage);
       const currentYear = new Date().getFullYear();
-      if (year < 1800 || year > currentYear) {
+      if (isNaN(year) || year < 1800 || year > currentYear) {
         validated.vintage = undefined;
       }
     }
 
     // Validar teor alcoólico
-    if (validated.alcoholContent && !validated.alcoholContent.includes('%')) {
-      const alcohol = parseFloat(validated.alcoholContent);
-      if (alcohol > 0 && alcohol < 50) {
-        validated.alcoholContent = `${alcohol}%`;
+    if (validated.alcoholContent) {
+      if (!validated.alcoholContent.includes('%')) {
+        const alcohol = parseFloat(validated.alcoholContent);
+        if (!isNaN(alcohol) && alcohol > 0 && alcohol < 50) {
+          validated.alcoholContent = `${alcohol}%`;
+        } else {
+          validated.alcoholContent = undefined;
+        }
       }
     }
 
@@ -182,16 +187,18 @@ Responda APENAS com o JSON válido, sem texto adicional.
    */
   private getDefaultFoodPairings(wineType: string): string[] {
     const pairings: Record<string, string[]> = {
-      'Tinto': ['Carnes vermelhas', 'Queijos envelhecidos', 'Massas com molho vermelho'],
-      'Branco': ['Peixes', 'Frutos do mar', 'Queijos frescos', 'Saladas'],
-      'Rosé': ['Aves', 'Peixes grelhados', 'Saladas', 'Aperitivos'],
-      'Espumante': ['Aperitivos', 'Frutos do mar', 'Sobremesas leves'],
-      'Vinho Tinto': ['Carnes vermelhas', 'Queijos envelhecidos', 'Massas com molho vermelho'],
-      'Vinho Branco': ['Peixes', 'Frutos do mar', 'Queijos frescos', 'Saladas'],
-      'Vinho Rosé': ['Aves', 'Peixes grelhados', 'Saladas', 'Aperitivos']
+      'Tinto': ['Carnes vermelhas grelhadas', 'Queijos curados', 'Massas com molho de tomate'],
+      'Branco': ['Peixes e Frutos do mar', 'Aves com molhos leves', 'Queijos de cabra'],
+      'Rosé': ['Salmão grelhado', 'Saladas de verão', 'Charcutaria'],
+      'Espumante': ['Ostras', 'Canapés', 'Frituras', 'Sushi'],
+      'Vinho Tinto': ['Carnes vermelhas', 'Queijos'],
+      'Vinho Branco': ['Peixes', 'Saladas'],
+      'Vinho Rosé': ['Peixes', 'Aperitivos'],
+      'Vinho de Sobremesa': ['Queijos azuis', 'Sobremesas'],
+      'Fortificado': ['Chocolate', 'Queijos fortes']
     };
 
-    return pairings[wineType] || ['Aperitivos', 'Queijos'];
+    return pairings[wineType] || ['Queijos variados', 'Aperitivos'];
   }
 
   /**
@@ -204,25 +211,45 @@ Responda APENAS com o JSON válido, sem texto adicional.
 
     try {
       const completion = await this.openai!.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "Você é um sommelier especialista. Analise esta imagem de rótulo de vinho e extraia todas as informações possíveis. Responda SEMPRE em Português do Brasil."
+            content: "Você é um Sommelier Expert. Sua função é extrair dados de rótulos de vinho com precisão. NÃO INVENTE DADOS que não podem ser vistos ou deduzidos factualmente."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Analise esta imagem de rótulo de vinho e forneça informações detalhadas em formato JSON seguindo a estrutura: wineName, winery, vintage, region, country, grapeVarieties, alcoholContent, wineType, tastingNotes, foodPairings, priceRange, description.
+                text: `Analise a imagem deste rótulo. Extraia os dados visíveis e identifique o vinho.
                 
-                REGRAS:
-                1. Tudo deve estar em Português do Brasil.
-                2. Se uma informação não for encontrada:
-                   - Campos de texto: use "Informação não encontrada".
-                   - Listas: use ["Informação não encontrada"].
-                   - NUNCA use "Unknown" ou null.`
+                REGRAS DE OURO (ANTI-ALUCINAÇÃO):
+                1. Extraia EXATAMENTE o que vê (Vinícola, Nome, Safra, Região).
+                2. Se identificar o vinho com certeza (ex: reconhece o rótulo do "Casillero del Diablo Cabernet Sauvignon"), VOCÊ PODE preencher a uva e a região corretas baseado no seu conhecimento, POIS ISSO É FATO.
+                3. SE NÃO TIVER CERTEZA, use "Não identificado".
+                4. NÃO invente safra (vintage) se não estiver visível.
+                5. NÃO invente teor alcoólico se não estiver visível.
+                6. PREÇO: Estime o valor médio de mercado no Brasil (Isso é uma estimativa permitida).
+                7. Harmonização e Notas: Forneça baseadas no TIPO de vinho identificado.
+
+                Retorne JSON:
+                {
+                  "wineName": "Nome",
+                  "winery": "Produtor",
+                  "vintage": "Ano ou null",
+                  "region": "Região",
+                  "country": "País",
+                  "grapeVarieties": ["List"],
+                  "alcoholContent": "Teor ou null",
+                  "wineType": "Tipo",
+                  "tastingNotes": "Descrição típica",
+                  "foodPairings": ["Lista"],
+                  "priceRange": "Estimativa R$",
+                  "description": "Breve descrição"
+                }
+
+                Responda em PORTUGUÊS.`
               },
               {
                 type: "image_url",
@@ -233,7 +260,7 @@ Responda APENAS com o JSON válido, sem texto adicional.
             ]
           }
         ],
-        temperature: 0.3,
+        temperature: 0.2, // Baixa temperatura para reduzir alucinações
         max_tokens: 1000,
         response_format: { type: "json_object" }
       });
@@ -262,6 +289,44 @@ Responda APENAS com o JSON válido, sem texto adicional.
           ? `Falha na análise da imagem: ${error.message}`
           : 'Erro desconhecido ao analisar a imagem'
       );
+    }
+  }
+  /**
+   * Obtém recomendações de vinhos baseadas em um prompt livre
+   * Permite que a IA use seu conhecimento para sugerir vinhos (ao contrário da análise de rótulo que é estrita)
+   */
+  public async getWineRecommendations(prompt: string): Promise<any> {
+    if (!this.isConfigured()) {
+      throw new Error('OpenAI não está configurado.');
+    }
+
+    try {
+      const completion = await this.openai!.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "Você é um Sommelier Expert criativo e prestativo. Sua tarefa é recomendar vinhos baseados no contexto fornecido. Use seu vasto conhecimento para sugerir vinhos reais e interessantes."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7, // Mais criatividade para recomendações
+        max_tokens: 1000,
+        response_format: { type: "json_object" }
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('Resposta vazia da OpenAI');
+      }
+
+      return JSON.parse(response);
+    } catch (error: any) {
+      console.error('Erro ao obter recomendações:', error);
+      throw error;
     }
   }
 }

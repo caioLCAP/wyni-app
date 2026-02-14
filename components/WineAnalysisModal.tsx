@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Image,
 } from 'react-native';
 import { X, Wine, Calendar, MapPin, Grape, Percent, Utensils, DollarSign, Save, Share2, Cloud, Sun, Clock, Star } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
@@ -214,6 +215,11 @@ export function WineAnalysisModal({
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {imageUri && (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: imageUri }} style={styles.scannedImage} resizeMode="cover" />
+            </View>
+          )}
           {analysis && (
             <>
               {/* Informações Básicas */}
@@ -505,6 +511,19 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 8,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 250,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scannedImage: {
+    width: '100%',
+    height: '100%',
   },
   content: {
     flex: 1,

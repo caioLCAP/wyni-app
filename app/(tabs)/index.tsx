@@ -10,6 +10,7 @@ import {
   ImageBackground,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Sun, CloudRain, Wind, ThermometerSun, Clock, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -27,10 +28,10 @@ export default function DiscoverScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const [dailyWines, setDailyWines] = useState([]);
+  const [dailyWines, setDailyWines] = useState<any[]>([]);
   const [weatherCondition, setWeatherCondition] = useState('sunny');
   const [loading, setLoading] = useState(true);
-  const [favoriteStates, setFavoriteStates] = useState({});
+  const [favoriteStates, setFavoriteStates] = useState<any>({});
 
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -206,17 +207,23 @@ export default function DiscoverScreen() {
 
   const handleMomentoWyniPress = () => {
     if (!user) {
-      Alert.alert(
-        'Login necessário',
-        'Para acessar o Momento Wyni, você precisa estar logado.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Fazer Login',
-            onPress: () => router.push('/login')
-          }
-        ]
-      );
+      if (Platform.OS === 'web') {
+        if (confirm('Login necessário\n\nPara acessar o Momento Wyni, você precisa estar logado.\nDeseja fazer login?')) {
+          router.push('/login');
+        }
+      } else {
+        Alert.alert(
+          'Login necessário',
+          'Para acessar o Momento Wyni, você precisa estar logado.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Fazer Login',
+              onPress: () => router.push('/login')
+            }
+          ]
+        );
+      }
       return;
     }
     router.push('/scanner');

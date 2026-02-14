@@ -307,7 +307,7 @@ IMPORTANTE:
       // Try to get AI recommendations first
       try {
         const prompt = this.createRecommendationPrompt(weather, dayContext, locationContext, userLocation);
-        const aiResponse = await openaiService.analyzeWineLabel(prompt);
+        const aiResponse = await openaiService.getWineRecommendations(prompt);
 
         if (aiResponse) {
           // Parse AI response and convert to our format

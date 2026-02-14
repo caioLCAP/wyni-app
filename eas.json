@@ -34,7 +34,8 @@
   "submit": {
     "appstore": {
       "ios": {
-        "appleId": "lupacap@gmail.com"
+        "appleId": "lupacap@gmail.com",
+        "ascAppId": "6758225955"
       }
     }
   }
