@@ -9,10 +9,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Camera, ImageIcon } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { supabase } from '@/services/supabaseClient';
+import { wineStorageService } from '@/services/wineStorageService';
 import { FilterChip } from '@/components/FilterChip';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { colors } from '@/constants/colors';
 
 export default function AddWineScreen() {
@@ -26,12 +32,21 @@ export default function AddWineScreen() {
   const [selectedAromas, setSelectedAromas] = useState<string[]>([]);
   const [selectedFoodPairings, setSelectedFoodPairings] = useState<string[]>([]);
 
+  // Novos campos opcionais
+  const [vintage, setVintage] = useState('');
+  const [producer, setProducer] = useState('');
+  const [alcoholContent, setAlcoholContent] = useState('');
+  const [servingTemperature, setServingTemperature] = useState('');
+  const [agingPotential, setAgingPotential] = useState('');
+  const [price, setPrice] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
   // Reference data
-  const [countries, setCountries] = useState([]);
-  const [regions, setRegions] = useState([]);
-  const [characteristics, setCharacteristics] = useState([]);
-  const [aromas, setAromas] = useState([]);
-  const [foodPairings, setFoodPairings] = useState([]);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [regions, setRegions] = useState<any[]>([]);
+  const [characteristics, setCharacteristics] = useState<any[]>([]);
+  const [aromas, setAromas] = useState<any[]>([]);
+  const [foodPairings, setFoodPairings] = useState<any[]>([]);
 
   // Wine types
   const wineTypes = [
@@ -95,6 +110,55 @@ export default function AddWineScreen() {
     }
   };
 
+  const pickImageFromGallery = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permissão Necessária', 'Precisamos de permissão para acessar suas fotos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar imagem:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permissão Necessária', 'Precisamos de permissão para usar a câmera.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erro ao capturar foto:', error);
+      Alert.alert('Erro', 'Não foi possível capturar a foto');
+    }
+  };
+
   const checkDuplicateName = async (grapeName: string) => {
     try {
       const { data, error } = await supabase
@@ -130,6 +194,15 @@ export default function AddWineScreen() {
         return;
       }
 
+      // Upload image if exists
+      let imageUrl = null;
+      if (imageUri) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          imageUrl = await wineStorageService.uploadWineImage(user.id, imageUri);
+        }
+      }
+
       // Insert the grape
       const { data: grapeData, error: grapeError } = await supabase
         .from('grapes')
@@ -138,7 +211,14 @@ export default function AddWineScreen() {
           description,
           type: wineType,
           wine_type: wineType,
-          origin_country_id: selectedCountry
+          origin_country_id: selectedCountry,
+          vintage: vintage || null,
+          producer: producer || null,
+          alcohol_content: alcoholContent || null,
+          serving_temperature: servingTemperature || null,
+          aging_potential: agingPotential || null,
+          price: price || null,
+          image_url: imageUrl
         })
         .select()
         .single();
@@ -197,7 +277,12 @@ export default function AddWineScreen() {
         if (foodError) throw foodError;
       }
 
-      Alert.alert('Sucesso', 'Vinho adicionado com sucesso!');
+      Alert.alert('Sucesso', 'Vinho adicionado com sucesso!', [
+        {
+          text: 'OK',
+          onPress: () => router.push('/')
+        }
+      ]);
       resetForm();
     } catch (error) {
       console.error('Error saving wine:', error);
@@ -216,6 +301,13 @@ export default function AddWineScreen() {
     setSelectedCharacteristics([]);
     setSelectedAromas([]);
     setSelectedFoodPairings([]);
+    setVintage('');
+    setProducer('');
+    setAlcoholContent('');
+    setServingTemperature('');
+    setAgingPotential('');
+    setPrice('');
+    setImageUri(null);
   };
 
   const toggleSelection = (setter: Function, currentValues: string[]) => (id: string) => {
@@ -240,118 +332,241 @@ export default function AddWineScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Nome do Vinho *</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Digite o nome do vinho"
-            placeholderTextColor={colors.textSecondary}
-          />
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Tipo de Vinho *</Text>
-          <View style={styles.chipContainer}>
-            {wineTypes.map((type, index) => (
-              <FilterChip
-                key={`${type}-${index}`}
-                label={type}
-                selected={wineType === type}
-                onPress={() => setWineType(type === wineType ? '' : type)}
-              />
-            ))}
+        {/* Informações Básicas */}
+        <CollapsibleSection title="Informações Básicas" defaultExpanded={true} required={true}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Nome do Vinho *</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Digite o nome do vinho"
+              placeholderTextColor={colors.textSecondary}
+            />
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Descrição</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Descreva as características do vinho"
-            placeholderTextColor={colors.textSecondary}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>País de Origem *</Text>
-          <View style={styles.chipContainer}>
-            {countries.map((country, index) => (
-              <FilterChip
-                key={`${country.id}-${index}`}
-                label={country.name}
-                selected={selectedCountry === country.id}
-                onPress={() => setSelectedCountry(
-                  selectedCountry === country.id ? '' : country.id
-                )}
-              />
-            ))}
-          </View>
-        </View>
-
-        {selectedCountry && regions.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Regiões</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Tipo de Vinho *</Text>
             <View style={styles.chipContainer}>
-              {regions.map((region, index) => (
+              {wineTypes.map((type, index) => (
                 <FilterChip
-                  key={`${region.id}-${index}`}
-                  label={region.name}
-                  selected={selectedRegions.includes(region.id)}
-                  onPress={() => toggleSelection(setSelectedRegions, selectedRegions)(region.id)}
+                  key={`${type}-${index}`}
+                  label={type}
+                  selected={wineType === type}
+                  onPress={() => setWineType(type === wineType ? '' : type)}
                 />
               ))}
             </View>
           </View>
-        )}
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Características</Text>
-          <View style={styles.chipContainer}>
-            {characteristics.map((char, index) => (
-              <FilterChip
-                key={`${char.id}-${index}`}
-                label={char.name}
-                selected={selectedCharacteristics.includes(char.id)}
-                onPress={() => toggleSelection(setSelectedCharacteristics, selectedCharacteristics)(char.id)}
-              />
-            ))}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Descrição</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Descreva as características do vinho"
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
           </View>
-        </View>
+        </CollapsibleSection>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Aromas</Text>
-          <View style={styles.chipContainer}>
-            {aromas.map((aroma, index) => (
-              <FilterChip
-                key={`${aroma.id}-${index}`}
-                label={aroma.name}
-                selected={selectedAromas.includes(aroma.id)}
-                onPress={() => toggleSelection(setSelectedAromas, selectedAromas)(aroma.id)}
-              />
-            ))}
-          </View>
-        </View>
+        {/* Foto do Vinho */}
+        <CollapsibleSection title="Foto do Vinho" defaultExpanded={true}>
+          <View style={styles.imageSection}>
+            {imageUri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => setImageUri(null)}>
+                  <Text style={styles.removeImageText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <ImageIcon size={48} color={colors.textSecondary} />
+                <Text style={styles.imagePlaceholderText}>Nenhuma foto selecionada</Text>
+              </View>
+            )}
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Harmonizações</Text>
-          <View style={styles.chipContainer}>
-            {foodPairings.map((food, index) => (
-              <FilterChip
-                key={`${food.id}-${index}`}
-                label={food.name}
-                selected={selectedFoodPairings.includes(food.id)}
-                onPress={() => toggleSelection(setSelectedFoodPairings, selectedFoodPairings)(food.id)}
-              />
-            ))}
+            <View style={styles.imageButtonsContainer}>
+              <TouchableOpacity
+                style={styles.imageButton}
+                onPress={pickImageFromGallery}>
+                <ImageIcon size={20} color={colors.textLight} />
+                <Text style={styles.imageButtonText}>Galeria</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.imageButton}
+                onPress={takePhoto}>
+                <Camera size={20} color={colors.textLight} />
+                <Text style={styles.imageButtonText}>Câmera</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </CollapsibleSection>
+
+        {/* Detalhes do Produto */}
+        <CollapsibleSection title="Detalhes do Produto" defaultExpanded={false}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Safra / Ano</Text>
+            <TextInput
+              style={styles.input}
+              value={vintage}
+              onChangeText={setVintage}
+              placeholder="Ex: 2020"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Produtor / Vinícola</Text>
+            <TextInput
+              style={styles.input}
+              value={producer}
+              onChangeText={setProducer}
+              placeholder="Nome do produtor ou vinícola"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Teor Alcoólico</Text>
+            <TextInput
+              style={styles.input}
+              value={alcoholContent}
+              onChangeText={setAlcoholContent}
+              placeholder="Ex: 13.5%"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Preço</Text>
+            <TextInput
+              style={styles.input}
+              value={price}
+              onChangeText={setPrice}
+              placeholder="Ex: R$ 150,00"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+        </CollapsibleSection>
+
+        {/* Origem */}
+        <CollapsibleSection title="Origem" defaultExpanded={false} required={true}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>País de Origem *</Text>
+            <View style={styles.chipContainer}>
+              {countries.map((country, index) => (
+                <FilterChip
+                  key={`${country.id}-${index}`}
+                  label={country.name}
+                  selected={selectedCountry === country.id}
+                  onPress={() => setSelectedCountry(
+                    selectedCountry === country.id ? '' : country.id
+                  )}
+                />
+              ))}
+            </View>
+          </View>
+
+          {selectedCountry && regions.length > 0 && (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Regiões</Text>
+              <View style={styles.chipContainer}>
+                {regions.map((region, index) => (
+                  <FilterChip
+                    key={`${region.id}-${index}`}
+                    label={region.name}
+                    selected={selectedRegions.includes(region.id)}
+                    onPress={() => toggleSelection(setSelectedRegions, selectedRegions)(region.id)}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </CollapsibleSection>
+
+        {/* Características */}
+        <CollapsibleSection title="Características" defaultExpanded={false}>
+          <View style={styles.fieldGroup}>
+            <View style={styles.chipContainer}>
+              {characteristics.map((char, index) => (
+                <FilterChip
+                  key={`${char.id}-${index}`}
+                  label={char.name}
+                  selected={selectedCharacteristics.includes(char.id)}
+                  onPress={() => toggleSelection(setSelectedCharacteristics, selectedCharacteristics)(char.id)}
+                />
+              ))}
+            </View>
+          </View>
+        </CollapsibleSection>
+
+        {/* Aromas */}
+        <CollapsibleSection title="Aromas" defaultExpanded={false}>
+          <View style={styles.fieldGroup}>
+            <View style={styles.chipContainer}>
+              {aromas.map((aroma, index) => (
+                <FilterChip
+                  key={`${aroma.id}-${index}`}
+                  label={aroma.name}
+                  selected={selectedAromas.includes(aroma.id)}
+                  onPress={() => toggleSelection(setSelectedAromas, selectedAromas)(aroma.id)}
+                />
+              ))}
+            </View>
+          </View>
+        </CollapsibleSection>
+
+        {/* Harmonizações */}
+        <CollapsibleSection title="Harmonizações" defaultExpanded={false}>
+          <View style={styles.fieldGroup}>
+            <View style={styles.chipContainer}>
+              {foodPairings.map((food, index) => (
+                <FilterChip
+                  key={`${food.id}-${index}`}
+                  label={food.name}
+                  selected={selectedFoodPairings.includes(food.id)}
+                  onPress={() => toggleSelection(setSelectedFoodPairings, selectedFoodPairings)(food.id)}
+                />
+              ))}
+            </View>
+          </View>
+        </CollapsibleSection>
+
+        {/* Recomendações de Consumo */}
+        <CollapsibleSection title="Recomendações de Consumo" defaultExpanded={false}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Temperatura de Serviço</Text>
+            <TextInput
+              style={styles.input}
+              value={servingTemperature}
+              onChangeText={setServingTemperature}
+              placeholder="Ex: 16-18°C"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Potencial de Guarda</Text>
+            <TextInput
+              style={styles.input}
+              value={agingPotential}
+              onChangeText={setAgingPotential}
+              placeholder="Ex: 5-10 anos"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+        </CollapsibleSection>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -380,6 +595,9 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  fieldGroup: {
+    marginBottom: 16,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
@@ -403,6 +621,81 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 8,
+  },
+  imageSection: {
+    alignItems: 'center',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  imagePreview: {
+    width: 200,
+    height: 250,
+    borderRadius: 12,
+    backgroundColor: colors.border,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#EF4444',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  removeImageText: {
+    color: colors.textLight,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  imagePlaceholder: {
+    width: 200,
+    height: 250,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  imagePlaceholderText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  imageButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    gap: 8,
+  },
+  imageButtonText: {
+    color: colors.textLight,
+    fontSize: 14,
+    fontWeight: '600',
   },
   buttonContainer: {
     marginTop: 32,
