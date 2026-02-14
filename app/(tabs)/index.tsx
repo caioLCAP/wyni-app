@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
   TouchableOpacity,
   Dimensions,
   ImageBackground,
   ActivityIndicator,
 } from 'react-native';
-import { Sun, CloudRain, Wind, ThermometerSun, Clock } from 'lucide-react-native';
+import { Sun, CloudRain, Wind, ThermometerSun, Clock, Camera } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { WineCard } from '@/components/WineCard';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -23,6 +24,7 @@ const { width } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const { user } = useAuth();
   const [dailyWines, setDailyWines] = useState([]);
   const [weatherCondition, setWeatherCondition] = useState('sunny');
@@ -34,7 +36,7 @@ export default function DiscoverScreen() {
       try {
         setLoading(true);
         const recommendations = await aiWineRecommendationService.getDailyRecommendations();
-        
+
         // Convert AI recommendations to WineCard format
         const wineCards = recommendations.map(rec => ({
           id: rec.id,
@@ -52,9 +54,9 @@ export default function DiscoverScreen() {
           aromas: rec.aromas,
           aiReason: rec.aiReason
         }));
-        
+
         setDailyWines(wineCards);
-        
+
         // Load favorite states for authenticated users
         if (user) {
           await loadFavoriteStates(wineCards);
@@ -71,13 +73,13 @@ export default function DiscoverScreen() {
 
   const loadFavoriteStates = async (wines) => {
     if (!user) return;
-    
+
     const states = {};
     for (const wine of wines) {
       try {
         // Para recomendações de IA, verificar se existe um vinho similar salvo
         const savedWine = await wineStorageService.findSavedWineByName(wine.name);
-        
+
         if (savedWine) {
           const isFavorite = await wineStorageService.isWineFavorite(savedWine.id);
           states[wine.id] = { isFavorite, savedWineId: savedWine.id };
@@ -99,9 +101,9 @@ export default function DiscoverScreen() {
     // Atualizar estado local imediatamente para melhor UX
     setFavoriteStates(prev => ({
       ...prev,
-      [wineId]: { 
-        ...prev[wineId], 
-        isFavorite 
+      [wineId]: {
+        ...prev[wineId],
+        isFavorite
       }
     }));
 
@@ -112,7 +114,7 @@ export default function DiscoverScreen() {
       if (isFavorite) {
         // Verificar se já existe um vinho similar
         let savedWine = await wineStorageService.findSavedWineByName(wine.name);
-        
+
         if (!savedWine) {
           // Salvar o vinho primeiro
           savedWine = await wineStorageService.saveWineFromAI({
@@ -131,11 +133,11 @@ export default function DiscoverScreen() {
         if (savedWine) {
           // Verificar se já é favorito antes de tentar favoritar
           const isAlreadyFavorite = await wineStorageService.isWineFavorite(savedWine.id);
-          
+
           if (!isAlreadyFavorite) {
             await wineStorageService.toggleFavorite(savedWine.id);
           }
-          
+
           setFavoriteStates(prev => ({
             ...prev,
             [wineId]: { isFavorite: true, savedWineId: savedWine.id }
@@ -153,7 +155,7 @@ export default function DiscoverScreen() {
             await wineStorageService.toggleFavorite(savedWine.id);
           }
         }
-        
+
         setFavoriteStates(prev => ({
           ...prev,
           [wineId]: { ...prev[wineId], isFavorite: false }
@@ -164,9 +166,9 @@ export default function DiscoverScreen() {
       // Reverter estado em caso de erro
       setFavoriteStates(prev => ({
         ...prev,
-        [wineId]: { 
-          ...prev[wineId], 
-          isFavorite: !isFavorite 
+        [wineId]: {
+          ...prev[wineId],
+          isFavorite: !isFavorite
         }
       }));
     }
@@ -228,23 +230,23 @@ export default function DiscoverScreen() {
           <View style={styles.sectionHeaderContainer}>
             <SectionHeader title="Sugestão do Dia" seeAllLink="library" />
           </View>
-          
+
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>Gerando sugestões personalizadas...</Text>
             </View>
           ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredScrollContent}
             >
               {dailyWines.map((wine) => (
                 <View key={wine.id} style={styles.wineCardContainer}>
-                  <WineCard 
-                    wine={wine} 
-                    featured 
+                  <WineCard
+                    wine={wine}
+                    featured
                     showActions={true}
                     isFavorite={favoriteStates[wine.id]?.isFavorite || false}
                     onFavoriteChange={(isFavorite) => handleFavoriteChange(wine.id, isFavorite)}
@@ -261,32 +263,36 @@ export default function DiscoverScreen() {
         </View>
 
         <View style={styles.section}>
-          <SectionHeader title="Desafio de Degustação" />
-          <TouchableOpacity disabled>
+          <TouchableOpacity onPress={() => router.push('/scanner')}>
             <ImageBackground
-              source={{ uri: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg' }}
-              style={styles.challengeCard}
-              imageStyle={styles.challengeCardImage}
+              source={{ uri: 'https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg' }}
+              style={styles.momentCard}
+              imageStyle={styles.momentCardImage}
             >
               <LinearGradient
-                colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
-                style={styles.challengeGradient}
+                colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.8)']}
+                style={styles.momentGradient}
               >
-                <View style={styles.comingSoonBadge}>
-                  <Clock size={16} color={colors.textLight} />
-                  <Text style={styles.comingSoonText}>Em breve</Text>
+                <View style={styles.momentHeader}>
+                  <Text style={styles.momentTitle}>Momento WYNI</Text>
+                  <View style={styles.momentIconContainer}>
+                    <Camera size={24} color={colors.textLight} />
+                  </View>
                 </View>
-                <Text style={styles.challengeTitle}>Desafie seus Amigos</Text>
-                <Text style={styles.challengeSubtitle}>
-                  Compare suas impressões e aprenda junto
-                </Text>
-                <View style={styles.disabledButton}>
-                  <Text style={styles.disabledButtonText}>Funcionalidade em desenvolvimento</Text>
+                <View style={styles.momentFooter}>
+                  <Text style={styles.momentSubtitle}>Escanear Vinho</Text>
+                  <Text style={styles.momentDescription}>
+                    Registre seu momento e descubra tudo sobre seu vinho
+                  </Text>
+                  <View style={styles.momentButton}>
+                    <Text style={styles.momentButtonText}>Começar Agora</Text>
+                  </View>
                 </View>
               </LinearGradient>
             </ImageBackground>
           </TouchableOpacity>
         </View>
+
 
         <View style={styles.section}>
           <SectionHeader title="Perfil Sensorial" />
@@ -313,7 +319,7 @@ export default function DiscoverScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+    </ScrollView >
   );
 }
 
@@ -414,9 +420,78 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   section: {
-    marginTop: 40,
+    marginTop: 24,
     paddingHorizontal: 24,
     marginBottom: 8,
+  },
+  momentCard: {
+    height: 240,
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  momentCardImage: {
+    borderRadius: 24,
+  },
+  momentGradient: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'space-between',
+  },
+  momentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  momentIconContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 12,
+    borderRadius: 50,
+    backdropFilter: 'blur(10px)',
+  },
+  momentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    opacity: 0.9,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  momentFooter: {
+    gap: 8,
+  },
+  momentSubtitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  momentDescription: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    maxWidth: '90%',
+    lineHeight: 22,
+  },
+  momentButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 24,
+    alignSelf: 'flex-start',
+    marginTop: 16,
+  },
+  momentButtonText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '600',
   },
   challengeCard: {
     height: 200,

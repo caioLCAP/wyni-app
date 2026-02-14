@@ -8,15 +8,19 @@ interface WineDetailsCardProps {
     id: string;
     name: string;
     region: string;
-    grapes: string;
+    grapes?: string;
     year: string;
+    type?: string;
     rating: number;
     price: string;
     imageUrl: string;
-    description: string;
-    pairings: string[];
-    characteristics: string[];
+    description?: string;
+    pairings?: string[];
+    characteristics?: string[];
     aromas?: string[];
+    weather?: string;
+    moment?: string;
+    location?: string;
   };
 }
 
@@ -27,27 +31,27 @@ export function WineDetailsCard({ wine }: WineDetailsCardProps) {
         <View style={styles.imageContainer}>
           <Image source={{ uri: wine.imageUrl }} style={styles.image} />
         </View>
-        
+
         <View style={styles.header}>
           <Text style={styles.name}>{wine.name}</Text>
-          
+
           <View style={styles.basicInfo}>
             <View style={styles.infoRow}>
               <MapPin size={18} color={colors.primary} />
               <Text style={styles.infoText}>{wine.region}</Text>
             </View>
-            
+
             <View style={styles.infoRow}>
               <Clock size={18} color={colors.primary} />
               <Text style={styles.infoText}>Safra {wine.year}</Text>
             </View>
-            
+
             <View style={styles.infoRow}>
               <Wine size={18} color={colors.primary} />
               <Text style={styles.infoText}>{wine.type}</Text>
             </View>
           </View>
-          
+
           <View style={styles.ratingPriceRow}>
             <View style={styles.ratingContainer}>
               <Star size={20} color={colors.secondary} fill={colors.secondary} />
@@ -56,13 +60,34 @@ export function WineDetailsCard({ wine }: WineDetailsCardProps) {
             <Text style={styles.price}>{wine.price}</Text>
           </View>
         </View>
-        
+
         <View style={styles.content}>
+          {/* Contexto do Momento */}
+          {(wine.weather || wine.moment) && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Contexto</Text>
+              <View style={styles.contextContainer}>
+                {wine.moment && (
+                  <View style={styles.contextItem}>
+                    <Text style={styles.contextLabel}>Momento</Text>
+                    <Text style={styles.contextValue}>{wine.moment}</Text>
+                  </View>
+                )}
+                {wine.weather && (
+                  <View style={styles.contextItem}>
+                    <Text style={styles.contextLabel}>Clima</Text>
+                    <Text style={styles.contextValue}>{wine.weather}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Descrição</Text>
             <Text style={styles.description}>{wine.description}</Text>
           </View>
-          
+
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Grape size={20} color={colors.primary} />
@@ -72,7 +97,7 @@ export function WineDetailsCard({ wine }: WineDetailsCardProps) {
               <Text style={styles.grapesText}>{wine.grapes}</Text>
             </View>
           </View>
-          
+
           {wine.characteristics && wine.characteristics.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Características</Text>
@@ -85,7 +110,7 @@ export function WineDetailsCard({ wine }: WineDetailsCardProps) {
               </View>
             </View>
           )}
-          
+
           {wine.aromas && wine.aromas.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Aromas</Text>
@@ -98,23 +123,25 @@ export function WineDetailsCard({ wine }: WineDetailsCardProps) {
               </View>
             </View>
           )}
-          
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Utensils size={20} color={colors.secondary} />
-              <Text style={styles.sectionTitle}>Harmonizações</Text>
+
+          {wine.pairings && wine.pairings.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Utensils size={20} color={colors.secondary} />
+                <Text style={styles.sectionTitle}>Harmonizações</Text>
+              </View>
+              <View style={styles.tagsContainer}>
+                {wine.pairings.map((pairing, index) => (
+                  <View key={index} style={styles.pairingTag}>
+                    <Text style={styles.pairingTagText}>{pairing}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-            <View style={styles.tagsContainer}>
-              {wine.pairings.map((pairing, index) => (
-                <View key={index} style={styles.pairingTag}>
-                  <Text style={styles.pairingTagText}>{pairing}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          )}
         </View>
       </View>
-      
+
       {/* Padding bottom para garantir que o conteúdo não seja cortado */}
       <View style={styles.bottomPadding} />
     </ScrollView>
@@ -273,5 +300,27 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 100,
+  },
+  contextContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+  },
+  contextItem: {
+    flex: 1,
+  },
+  contextLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  contextValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
   },
 });

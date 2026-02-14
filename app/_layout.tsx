@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -7,6 +8,7 @@ import { AuthProvider } from '@/providers/AuthProvider';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 import { locationService } from '@/services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const LOCATION_PERMISSION_KEY = 'location_permission_requested';
 
@@ -23,7 +25,7 @@ export default function RootLayout() {
     try {
       // Check if we've already asked for permission
       const hasAsked = await AsyncStorage.getItem(LOCATION_PERMISSION_KEY);
-      
+
       if (!hasAsked) {
         // Show modal on first app launch
         setTimeout(() => {
@@ -39,7 +41,7 @@ export default function RootLayout() {
     try {
       await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, 'true');
       setShowLocationModal(false);
-      
+
       // Request location permission
       const hasPermission = await locationService.requestLocationPermission();
       if (hasPermission) {
@@ -69,23 +71,28 @@ export default function RootLayout() {
     }
   };
 
+
   return (
-    <ThemeContext.Provider value={themeContext}>
-      <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-        </Stack>
-        <StatusBar style="auto" />
-        
-        <LocationPermissionModal
-          visible={showLocationModal}
-          onAllow={handleAllowLocation}
-          onDeny={handleDenyLocation}
-          onClose={handleCloseModal}
-        />
-      </AuthProvider>
-    </ThemeContext.Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeContext.Provider value={themeContext}>
+          <AuthProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+            </Stack>
+            <StatusBar style="auto" />
+
+            <LocationPermissionModal
+              visible={showLocationModal}
+              onAllow={handleAllowLocation}
+              onDeny={handleDenyLocation}
+              onClose={handleCloseModal}
+            />
+          </AuthProvider>
+        </ThemeContext.Provider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

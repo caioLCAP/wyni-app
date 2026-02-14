@@ -4,8 +4,10 @@ import { router, usePathname } from 'expo-router';
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/providers/AuthProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   const { colors, theme, toggleTheme } = useTheme();
   const { isGuest } = useAuth();
   const pathname = usePathname();
@@ -144,8 +146,8 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: colors.card,
             borderTopColor: colors.border,
-            height: 60,
-            paddingBottom: 8,
+            height: 60 + insets.bottom,
+            paddingBottom: 8 + insets.bottom,
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -234,7 +236,7 @@ export default function TabLayout() {
 
       {shouldShowFAB && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: 76 + insets.bottom }]}
           onPress={() => router.push('/add-wine')}
         >
           <Plus size={24} color={colors.textLight} />

@@ -16,14 +16,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/constants/colors';
 import { WineDetailsCard } from '@/components/WineDetailsCard';
 import { WineAnalysisModal } from '@/components/WineAnalysisModal';
-import { ShareModal } from '@/components/ShareModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { searchWineByName } from '@/services/wineService';
 import { openaiService } from '@/services/openaiService';
 import { WineType } from '@/types/wine';
 import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
-import { wineStorageService } from '@/services/wineStorageService';
+import { wineStorageService, SavedWine } from '@/services/wineStorageService';
 import { useAuth } from '@/providers/AuthProvider';
 import { shareService, ShareWineData } from '@/services/shareService';
 
@@ -76,10 +75,10 @@ export default function ScannerScreen() {
   const handlePickImage = async () => {
     try {
       setError(null);
-      
+
       // Request permission to access media library
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert(
           'Permissão necessária',
@@ -106,19 +105,19 @@ export default function ScannerScreen() {
       setError('Erro ao selecionar imagem da galeria. Tente novamente.');
     }
   };
-  
+
   const handleTakePhoto = async () => {
     if (!cameraRef.current) return;
-    
+
     try {
       setError(null);
-      
+
       // Take the picture
       const photo = await cameraRef.current.takePictureAsync({
         quality: 1,
         base64: false
       });
-      
+
       setCapturedPhoto(photo.uri);
       setShowCamera(false); // Fechar a câmera após capturar
     } catch (err) {
@@ -145,7 +144,7 @@ export default function ScannerScreen() {
       } else {
         // Para mobile, usar FileSystem
         const base64 = await FileSystem.readAsStringAsync(imageUri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64',
         });
         return base64;
       }
@@ -178,31 +177,31 @@ export default function ScannerScreen() {
       Alert.alert('Erro', 'Nenhuma foto foi capturada');
       return;
     }
-    
+
     if (analyzing) {
       return;
     }
-    
+
     try {
       setAnalyzing(true);
       setError(null);
       setQuotaExceeded(false);
-      
+
       // Converter imagem para base64
       const base64Image = await imageToBase64(capturedPhoto);
-      
+
       // Análise direta com OpenAI Vision
       const aiAnalysis = await openaiService.analyzeWineImage(base64Image);
-      
+
       if (!aiAnalysis) {
         throw new Error('A análise não retornou resultados');
       }
-      
+
       // Verificar se o vinho já existe na biblioteca do usuário (se estiver logado)
       if (user && aiAnalysis.wineName) {
         try {
           const existingWine = await wineStorageService.findSavedWineByName(aiAnalysis.wineName);
-          
+
           if (existingWine) {
             // Vinho encontrado na biblioteca - mostrar tela de vinho encontrado
             const wineType = convertSavedWineToWineType(existingWine);
@@ -223,17 +222,17 @@ export default function ScannerScreen() {
           return;
         }
       }
-      
+
       // Se não encontrou em lugar nenhum, mostrar modal de análise da IA
       setAiAnalysis(aiAnalysis);
       setShowAIModal(true);
-      
+
     } catch (aiError: any) {
       let errorMessage = 'Não foi possível analisar o rótulo. ';
       let isQuotaError = false;
-      
-      if (aiError.message?.includes('Limite de uso da API OpenAI excedido') || 
-          aiError.message?.includes('exceeded your current quota')) {
+
+      if (aiError.message?.includes('Limite de uso da API OpenAI excedido') ||
+        aiError.message?.includes('exceeded your current quota')) {
         errorMessage = 'Limite de uso da API OpenAI excedido.';
         isQuotaError = true;
         setQuotaExceeded(true);
@@ -248,9 +247,9 @@ export default function ScannerScreen() {
       } else {
         errorMessage += `Erro: ${aiError.message}`;
       }
-      
+
       setError(errorMessage);
-      
+
     } finally {
       setAnalyzing(false);
     }
@@ -287,72 +286,28 @@ export default function ScannerScreen() {
         vintage: wine.year,
         description: wine.description,
         rating: wine.rating,
-        grapes: wine.grapes,
+        grapes: wine.grapes || 'Variedade não informada',
       };
-      
+
       shareService.shareWine(shareData);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível compartilhar o vinho');
     }
   };
 
-  const handleSaveWineFromAI = async (analysis: WineAnalysisResult) => {
-    if (!user) {
-      Alert.alert(
-        'Login necessário',
-        'Você precisa estar logado para salvar vinhos',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
+  const handleSaveWineFromAI = (savedWine: SavedWine) => {
     try {
-      // Primeiro, tentar buscar o vinho na base de dados
-      if (analysis.wineName) {
-        const foundWine = await searchWineByName(analysis.wineName);
-        if (foundWine) {
-          setScanResult(foundWine);
-          setShowAIModal(false);
-          return;
-        }
-      }
-      
-      // Se não encontrou na base de dados, salvar os dados da IA
-      const wineData = {
-        wineName: analysis.wineName || 'Vinho Analisado',
-        winery: analysis.winery,
-        vintage: analysis.vintage,
-        region: analysis.region,
-        country: analysis.country,
-        grapeVarieties: analysis.grapeVarieties,
-        alcoholContent: analysis.alcoholContent,
-        wineType: analysis.wineType,
-        tastingNotes: analysis.tastingNotes,
-        foodPairings: analysis.foodPairings,
-        priceRange: analysis.priceRange,
-        description: analysis.description,
-        rating: 4.5 // Rating padrão para vinhos da IA
-      };
-
-      const savedWine = await wineStorageService.saveWineFromAI(wineData);
-      
       if (savedWine) {
         // Converter para WineType e mostrar na tela de resultado
         const wineType = convertSavedWineToWineType(savedWine);
         setScanResult(wineType);
         setShowAIModal(false);
-        
-        Alert.alert(
-          'Sucesso!',
-          `"${analysis.wineName || 'Vinho'}" foi salvo na sua biblioteca com sucesso!`,
-          [{ text: 'OK' }]
-        );
       }
     } catch (error) {
-      console.error('Erro ao salvar vinho da IA:', error);
+      console.error('Erro ao processar vinho salvo:', error);
       Alert.alert(
-        'Erro ao salvar',
-        'Não foi possível salvar o vinho na biblioteca. Tente novamente.',
+        'Erro',
+        'Ocorreu um erro ao exibir o vinho salvo.',
         [{ text: 'OK' }]
       );
     }
@@ -369,11 +324,11 @@ export default function ScannerScreen() {
           <View style={styles.resultHeaderContent}>
             <Text style={styles.resultTitle}>Vinho Encontrado!</Text>
             <Text style={styles.resultSubtitle}>
-              {scanResult.id.startsWith('saved-') 
-                ? 'Da sua biblioteca pessoal' 
+              {scanResult.id.startsWith('saved-')
+                ? 'Da sua biblioteca pessoal'
                 : 'Da nossa base de dados'}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.shareHeaderButton}
               onPress={() => handleShareWine(scanResult)}
             >
@@ -382,22 +337,22 @@ export default function ScannerScreen() {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        
+
         <View style={styles.resultContent}>
           <WineDetailsCard wine={scanResult} />
         </View>
 
         <View style={styles.resultFooter}>
-          <TouchableOpacity 
-            style={styles.scanAgainButton} 
+          <TouchableOpacity
+            style={styles.scanAgainButton}
             onPress={handleScanAgain}
           >
             <ScanLine size={20} color={colors.textLight} />
             <Text style={styles.scanAgainText}>Escanear Outro</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.libraryButton} 
+
+          <TouchableOpacity
+            style={styles.libraryButton}
             onPress={handleGoToLibrary}
           >
             <BookOpen size={20} color={colors.primary} />
@@ -415,7 +370,7 @@ export default function ScannerScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.photoPreviewContainer}>
           <Image source={{ uri: capturedPhoto }} style={styles.photoPreview} />
-          
+
           {analyzing && (
             <View style={styles.analyzingOverlay}>
               <ActivityIndicator size="large" color={colors.textLight} />
@@ -426,7 +381,7 @@ export default function ScannerScreen() {
             </View>
           )}
         </View>
-        
+
         {error && (
           <View style={[styles.errorContainer, quotaExceeded && styles.quotaErrorContainer]}>
             {quotaExceeded && <AlertTriangle size={20} color={colors.textLight} />}
@@ -452,23 +407,23 @@ export default function ScannerScreen() {
             )}
           </View>
         )}
-        
+
         <View style={styles.photoActions}>
-          <TouchableOpacity 
-            style={styles.secondaryButton} 
+          <TouchableOpacity
+            style={styles.secondaryButton}
             onPress={resetCapture}
             disabled={analyzing}
           >
             <RotateCcw size={20} color={colors.text} />
             <Text style={styles.secondaryButtonText}>Tirar Nova Foto</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
-              styles.analyzeButton, 
+              styles.analyzeButton,
               analyzing && styles.analyzingButton,
               quotaExceeded && styles.disabledButton
-            ]} 
+            ]}
             onPress={handleAnalyzePhoto}
             disabled={analyzing || quotaExceeded}
             activeOpacity={0.7}
@@ -482,7 +437,7 @@ export default function ScannerScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.instructionsSection}>
           <Text style={styles.instructionTitle}>Próximos Passos</Text>
           <Text style={styles.instructionText}>
@@ -501,7 +456,7 @@ export default function ScannerScreen() {
               • Use a busca manual na seção "Adicionar Vinho"
             </Text>
           )}
-          
+
           {!quotaExceeded && (
             <View style={styles.aiFeatures}>
               <Text style={styles.featuresTitle}>📋 O que podemos identificar:</Text>
@@ -530,10 +485,10 @@ export default function ScannerScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.cameraContainer}>
-          <CameraView 
+          <CameraView
             ref={cameraRef}
-            style={styles.camera} 
-            type={cameraType}
+            style={styles.camera}
+            facing={cameraType}
           >
             <View style={styles.cameraOverlay}>
               <View style={styles.scanFrame}>
@@ -542,26 +497,26 @@ export default function ScannerScreen() {
                 <View style={styles.cornerBL} />
                 <View style={styles.cornerBR} />
               </View>
-              
+
               <Text style={styles.cameraInstructionText}>
                 Posicione o rótulo do vinho dentro do quadro
               </Text>
             </View>
-            
+
             <View style={styles.cameraControls}>
               <TouchableOpacity style={styles.cameraButton} onPress={toggleCameraType}>
                 <Camera size={24} color={colors.textLight} />
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.captureButton} 
+
+              <TouchableOpacity
+                style={styles.captureButton}
                 onPress={handleTakePhoto}
               >
                 <View style={styles.captureButtonInner} />
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.cameraButton} 
+
+              <TouchableOpacity
+                style={styles.cameraButton}
                 onPress={() => setShowCamera(false)}
               >
                 <RotateCcw size={24} color={colors.textLight} />
@@ -590,8 +545,8 @@ export default function ScannerScreen() {
       </LinearGradient>
 
       <View style={styles.mainContent}>
-        <TouchableOpacity 
-          style={styles.photoButton} 
+        <TouchableOpacity
+          style={styles.photoButton}
           onPress={handleOpenCamera}
           activeOpacity={0.8}
         >
@@ -605,8 +560,8 @@ export default function ScannerScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.galleryButton} 
+        <TouchableOpacity
+          style={styles.galleryButton}
           onPress={handlePickImage}
           activeOpacity={0.8}
         >
@@ -619,7 +574,7 @@ export default function ScannerScreen() {
 
         <View style={styles.featuresSection}>
           <Text style={styles.featuresTitle}>Como Funciona</Text>
-          
+
           <View style={styles.featureStep}>
             <View style={styles.stepNumber}>
               <Text style={styles.stepNumberText}>1</Text>

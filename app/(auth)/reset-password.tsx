@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase } from '@/services/supabaseClient';
 import { useTheme } from '@/hooks/useTheme';
@@ -22,9 +22,21 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true); // Novo estado para controlar a verificação inicial
   const processedRef = useRef(false);
+  const routerParams = useLocalSearchParams();
 
   useEffect(() => {
-    // 1. Ouve mudanças na autenticação (caso o setSession funcione)
+    // Safety timeout: stop verifying after 10 seconds regardless of what happens
+    const safetyTimeout = setTimeout(() => {
+      setVerifying((current) => {
+        if (current) {
+          console.log('Safety timeout triggered: stopping verification.');
+          return false;
+        }
+        return current;
+      });
+    }, 10000);
+
+    // 1. Ouve mudanças na autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setVerifying(false);
@@ -32,47 +44,60 @@ export default function ResetPasswordScreen() {
     });
 
     const handleDeepLink = async (url: string | null) => {
-      if (!url) {
-        // Se não tem URL, verifica se já existe sessão ativa (ex: navegação interna)
+      // Tenta usar parâmetros do router se a URL vier vazia
+      if (!url && (!routerParams || Object.keys(routerParams).length === 0)) {
+        // Se não tem URL E não tem routerParams
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setVerifying(false);
         } else {
-          // Se demorar muito e não achar sessão, libera a tela mas o usuário pode ter erro
           setTimeout(() => setVerifying(false), 2000);
         }
         return;
       }
 
-      // Evita processamento duplo do mesmo link (comum em dev/concurrency)
+      // Evita processamento duplo
       if (processedRef.current) return;
       processedRef.current = true;
 
       console.log('Processando link:', url);
+      console.log('Router Params:', JSON.stringify(routerParams));
 
       try {
-        // O link vem no formato: scheme://path#access_token=...&refresh_token=...
-        let paramsString = '';
-        if (url.includes('#')) {
-          paramsString = url.split('#')[1];
-        } else if (url.includes('?')) {
-          paramsString = url.split('?')[1];
+        let params: { [key: string]: string } = {};
+
+        // 1. Tenta extrair da URL (String Parse)
+        if (url) {
+          let paramsString = '';
+          if (url.includes('#')) {
+            paramsString = url.split('#')[1];
+          } else if (url.includes('?')) {
+            paramsString = url.split('?')[1];
+          }
+
+          if (paramsString) {
+            paramsString.split('&').forEach((pair) => {
+              const parts = pair.split('=');
+              const key = parts[0];
+              const value = parts.slice(1).join('=');
+              if (key && value) {
+                params[key] = decodeURIComponent(value);
+              }
+            });
+          }
         }
 
-        if (paramsString) {
-          const params: { [key: string]: string } = {};
-          paramsString.split('&').forEach((pair) => {
-            // CORREÇÃO: Tokens podem conter múltiplos '=' (base64), então juntamos o resto
-            const parts = pair.split('=');
-            const key = parts[0];
-            const value = parts.slice(1).join('=');
+        // 2. Mescla com parâmetros do Expo Router (se existirem e não tivermos achado na URL)
+        // Router Params já vem decodificados
+        if (Object.keys(params).length === 0 && routerParams) {
+          if (typeof routerParams.code === 'string') params.code = routerParams.code;
+          if (typeof routerParams.access_token === 'string') params.access_token = routerParams.access_token;
+          if (typeof routerParams.refresh_token === 'string') params.refresh_token = routerParams.refresh_token;
+          if (typeof routerParams.error_description === 'string') params.error_description = routerParams.error_description;
+        }
 
-            if (key && value) {
-              params[key] = decodeURIComponent(value);
-            }
-          });
-
-          // Verifica se o Supabase retornou um erro na URL (ex: link expirado)
+        if (Object.keys(params).length > 0) {
+          // Lógica de validação (igual ao anterior)
           if (params.error_description) {
             const msg = params.error_description.replace(/\+/g, ' ');
             Alert.alert('Link Inválido', `${msg}\n\nDica: Se você usa Outlook ou e-mail corporativo, o antivírus pode ter clicado no link antes de você.`);
@@ -81,6 +106,7 @@ export default function ResetPasswordScreen() {
           }
 
           if (params.code) {
+            console.log('Detectado código PKCE via deep link.');
             const { error } = await supabase.auth.exchangeCodeForSession(params.code);
             if (error) {
               console.log('Erro exchangeCodeForSession:', error);
@@ -88,17 +114,22 @@ export default function ResetPasswordScreen() {
               // Verifica se, apesar do erro, temos sessão (ex: race condition)
               const { data: { session } } = await supabase.auth.getSession();
               if (session) {
+                console.log('Sessão encontrada apesar do erro.');
                 setVerifying(false); // Silently succeed
                 return;
               }
 
-              Alert.alert('Link Inválido', 'Não foi possível validar o código de recuperação.');
+              Alert.alert('Link Inválido', 'Não foi possível validar o código de recuperação.', [
+                { text: 'OK', onPress: () => setVerifying(false) }
+              ]);
             } else {
+              console.log('Sucesso no exchangeCodeForSession.');
               Alert.alert('Sucesso', 'Sessão recuperada. Defina sua nova senha.', [
                 { text: 'OK', onPress: () => setVerifying(false) }
               ]);
             }
           } else if (params.access_token && params.refresh_token) {
+            console.log('Detectado access_token via deep link.');
             const { error } = await supabase.auth.setSession({
               access_token: params.access_token,
               refresh_token: params.refresh_token,
@@ -109,6 +140,7 @@ export default function ResetPasswordScreen() {
               // Check if session exists anyway
               const { data: { session } } = await supabase.auth.getSession();
               if (session) {
+                console.log('Sessão encontrada apesar do erro de setSession.');
                 setVerifying(false);
                 return;
               }
@@ -117,12 +149,24 @@ export default function ResetPasswordScreen() {
                 { text: 'OK', onPress: () => setVerifying(false) }
               ]);
             } else {
+              console.log('Sucesso no setSession.');
               Alert.alert('Sucesso', 'Sessão recuperada. Defina sua nova senha.', [
                 { text: 'OK', onPress: () => setVerifying(false) }
               ]);
             }
           } else {
             console.log('Parâmetros não encontrados na URL:', params);
+            setVerifying(false);
+          }
+        } else {
+          console.log('URL sem parâmetros detectada.');
+          // Se estamos no fluxo de dev/tunnel, às vezes o link chega "pelado"
+          // Tenta verificar se já existe sessão (caso o browser tenha setado cookies?? não em nativo)
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setVerifying(false);
+          } else {
+            Alert.alert('Link Incompleto', 'O link não contém as informações de recuperação. Tente solicitar novamente.');
             setVerifying(false);
           }
         }
@@ -145,6 +189,7 @@ export default function ResetPasswordScreen() {
     const subscription = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
 
     return () => {
+      clearTimeout(safetyTimeout);
       subscription.remove();
       authListener.subscription.unsubscribe();
     };
@@ -188,6 +233,7 @@ export default function ResetPasswordScreen() {
       ]);
 
     } catch (error: any) {
+      console.error('Erro handleUpdatePassword:', error);
       Alert.alert('Erro', error.message || 'Não foi possível atualizar a senha.');
     } finally {
       setLoading(false);

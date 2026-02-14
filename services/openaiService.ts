@@ -55,7 +55,7 @@ export class OpenAIService {
 
     try {
       const prompt = this.createWineAnalysisPrompt(extractedText);
-      
+
       const completion = await this.openai!.chat.completions.create({
         model: "gpt-4o-mini", // Modelo mais econômico e eficiente
         messages: [
@@ -91,9 +91,9 @@ export class OpenAIService {
       } else if (error?.status >= 500) {
         throw new Error('Erro interno do servidor OpenAI. Tente novamente em alguns minutos.');
       }
-      
+
       throw new Error(
-        error instanceof Error 
+        error instanceof Error
           ? `Falha na análise do vinho: ${error.message}`
           : 'Erro desconhecido ao analisar o vinho'
       );
@@ -113,7 +113,7 @@ TEXTO DO RÓTULO:
 Por favor, extraia e forneça as seguintes informações em formato JSON válido:
 
 {
-  "wineName": "Nome do vinho (se identificado)",
+  "wineName": "Nome do vinho",
   "winery": "Nome da vinícola/produtor",
   "vintage": "Ano da safra (formato YYYY)",
   "region": "Região vinícola específica",
@@ -128,14 +128,16 @@ Por favor, extraia e forneça as seguintes informações em formato JSON válido
 }
 
 INSTRUÇÕES IMPORTANTES:
-1. Se uma informação não estiver clara no texto, use seu conhecimento sobre vinhos para fazer inferências educadas
-2. Para vinhos conhecidos, forneça informações adicionais baseadas em seu conhecimento
-3. Seja específico sobre regiões vinícolas (ex: "Bordeaux" ao invés de apenas "França")
-4. Inclua castas típicas da região se não estiverem explícitas no rótulo
-5. Forneça harmonizações gastronômicas apropriadas para o tipo de vinho
-6. Estime uma faixa de preço realista baseada na qualidade e origem
-7. Use português brasileiro para todas as descrições
-8. Se não conseguir identificar algo, use null ao invés de inventar informações
+1. Responda SEMPRE em Português do Brasil (pt-BR).
+2. Se uma informação não for encontrada ou identificada:
+   - Para campos de texto (string), preencha com "Informação não encontrada" (NUNCA use "Unknown", "N/A" ou null).
+   - Para listas (arrays), retorne uma lista contendo apenas ["Informação não encontrada"].
+3. Para vinhos conhecidos, use seu conhecimento para preencher dados faltantes (mas se ainda assim não souber, use a regra 2).
+4. Seja específico sobre regiões vinícolas (ex: "Bordeaux" ao invés de apenas "França").
+5. Inclua castas típicas da região se não estiverem explícitas no rótulo.
+6. Forneça harmonizações gastronômicas apropriadas para o tipo de vinho.
+7. Estime uma faixa de preço realista baseada na qualidade e origem.
+8. NUNCA invente dados aleatórios se não tiver certeza (use "Informação não encontrada").
 
 Responda APENAS com o JSON válido, sem texto adicional.
     `;
@@ -206,14 +208,21 @@ Responda APENAS com o JSON válido, sem texto adicional.
         messages: [
           {
             role: "system",
-            content: "Você é um sommelier especialista. Analise esta imagem de rótulo de vinho e extraia todas as informações possíveis."
+            content: "Você é um sommelier especialista. Analise esta imagem de rótulo de vinho e extraia todas as informações possíveis. Responda SEMPRE em Português do Brasil."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Analise esta imagem de rótulo de vinho e forneça informações detalhadas em formato JSON seguindo a estrutura: wineName, winery, vintage, region, country, grapeVarieties, alcoholContent, wineType, tastingNotes, foodPairings, priceRange, description"
+                text: `Analise esta imagem de rótulo de vinho e forneça informações detalhadas em formato JSON seguindo a estrutura: wineName, winery, vintage, region, country, grapeVarieties, alcoholContent, wineType, tastingNotes, foodPairings, priceRange, description.
+                
+                REGRAS:
+                1. Tudo deve estar em Português do Brasil.
+                2. Se uma informação não for encontrada:
+                   - Campos de texto: use "Informação não encontrada".
+                   - Listas: use ["Informação não encontrada"].
+                   - NUNCA use "Unknown" ou null.`
               },
               {
                 type: "image_url",
@@ -247,9 +256,9 @@ Responda APENAS com o JSON válido, sem texto adicional.
       } else if (error?.status >= 500) {
         throw new Error('Erro interno do servidor OpenAI. Tente novamente em alguns minutos.');
       }
-      
+
       throw new Error(
-        error instanceof Error 
+        error instanceof Error
           ? `Falha na análise da imagem: ${error.message}`
           : 'Erro desconhecido ao analisar a imagem'
       );

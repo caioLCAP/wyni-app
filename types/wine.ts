@@ -11,6 +11,10 @@ export interface WineType {
   grapes?: string;
   pairings?: string[];
   characteristics?: string[];
+  aromas?: string[];
+  weather?: string;
+  location?: string;
+  moment?: string;
 }
 
 export interface WineFilter {

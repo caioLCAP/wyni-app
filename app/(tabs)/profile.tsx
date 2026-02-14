@@ -21,6 +21,8 @@ import { WineType } from '@/types/wine';
 import * as ImagePicker from 'expo-image-picker';
 import { userService } from '@/services/userService';
 
+import { router } from 'expo-router';
+
 export default function ProfileScreen() {
   const { signOut, user, deleteAccount } = useAuth();
   const [favorites, setFavorites] = useState<WineType[]>([]);
@@ -289,6 +291,7 @@ export default function ProfileScreen() {
                     showActions
                     isFavorite={true}
                     onFavoriteChange={(isFavorite) => handleFavoriteChange(wine.id, isFavorite)}
+                    onPress={() => router.push({ pathname: '/wine/[id]', params: { id: wine.id } })}
                   />
                 ))}
               </ScrollView>
@@ -330,6 +333,7 @@ export default function ProfileScreen() {
                     showActions
                     isFavorite={favorites.some(f => f.id === wine.id)}
                     onFavoriteChange={(isFavorite) => handleFavoriteChange(wine.id, isFavorite)}
+                    onPress={() => router.push({ pathname: '/wine/[id]', params: { id: wine.id } })}
                   />
                 ))}
               </ScrollView>

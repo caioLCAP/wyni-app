@@ -6,11 +6,11 @@ export const analyzeWineLabel = async (imageUri: string): Promise<WineType | nul
   try {
     // Simulate API call delay for processing
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     if (!isConfigured) {
       return null;
     }
-    
+
     // Query Supabase for a random wine from the database
     const { data: wineData, error } = await supabase
       .from('grapes')
@@ -39,7 +39,7 @@ export const analyzeWineLabel = async (imageUri: string): Promise<WineType | nul
     if (wineData && wineData.length > 0) {
       // Randomly select one wine from the results
       const randomWine = wineData[Math.floor(Math.random() * wineData.length)];
-      
+
       // Generate random year and price for demo purposes
       const currentYear = new Date().getFullYear();
       const randomYear = Math.floor(Math.random() * 20) + (currentYear - 25); // Random year from 25 years ago to 5 years ago
@@ -49,16 +49,16 @@ export const analyzeWineLabel = async (imageUri: string): Promise<WineType | nul
         id: randomWine.id,
         name: randomWine.name,
         type: randomWine.wine_type || randomWine.type,
-        region: randomWine.country?.name || 'Região Desconhecida',
+        region: randomWine.country?.name || 'Região não informada',
         year: randomYear.toString(),
         rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // Random rating between 3.0 and 5.0
         price: `R$ ${randomPrice},00`,
         imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
         description: randomWine.description || 'Vinho de qualidade excepcional com características únicas.',
         grapes: randomWine.name,
-        characteristics: randomWine.characteristics?.map(c => c.characteristic.name) || [],
-        pairings: randomWine.food_pairings?.map(p => p.food_pairing.name) || [],
-        aromas: randomWine.aromas?.map(a => a.aroma.name) || []
+        characteristics: randomWine.characteristics?.map((c: any) => c.characteristic.name) || [],
+        pairings: randomWine.food_pairings?.map((p: any) => p.food_pairing.name) || [],
+        aromas: randomWine.aromas?.map((a: any) => a.aroma.name) || []
       };
     }
 
@@ -107,7 +107,7 @@ export const searchWineByName = async (wineName: string): Promise<WineType | nul
       const randomPrice = Math.floor(Math.random() * 500) + 50;
 
       // Construir informação de região mais detalhada
-      let regionInfo = wineData.country?.name || 'Região Desconhecida';
+      let regionInfo = wineData.country?.name || 'Região não informada';
       if (wineData.regions && wineData.regions.length > 0) {
         const region = wineData.regions[0].region;
         regionInfo = `${region.name}, ${region.country?.name || wineData.country?.name}`;
@@ -124,9 +124,9 @@ export const searchWineByName = async (wineName: string): Promise<WineType | nul
         imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
         description: wineData.description || `${wineData.name} é uma uva ${wineData.wine_type?.toLowerCase() || 'especial'} com características únicas e tradição vinícola. Originária de ${regionInfo}, oferece uma experiência sensorial excepcional com aromas e sabores distintivos.`,
         grapes: wineData.name,
-        characteristics: wineData.characteristics?.map(c => c.characteristic.name) || [],
-        pairings: wineData.food_pairings?.map(p => p.food_pairing.name) || [],
-        aromas: wineData.aromas?.map(a => a.aroma.name) || []
+        characteristics: wineData.characteristics?.map((c: any) => c.characteristic.name) || [],
+        pairings: wineData.food_pairings?.map((p: any) => p.food_pairing.name) || [],
+        aromas: wineData.aromas?.map((a: any) => a.aroma.name) || []
       };
     }
 
@@ -140,13 +140,13 @@ export const searchWineByName = async (wineName: string): Promise<WineType | nul
 export const getRecommendedWines = async (weatherCondition: string): Promise<WineType[]> => {
   try {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     if (!isConfigured) {
       return [];
     }
 
     let wineTypeFilter: string[] = [];
-    
+
     switch (weatherCondition) {
       case 'sunny':
         wineTypeFilter = ['Vinho Branco', 'Vinho Rosé'];
@@ -184,7 +184,7 @@ export const getRecommendedWines = async (weatherCondition: string): Promise<Win
     }
 
     if (wineData && wineData.length > 0) {
-      return wineData.map(wine => {
+      return wineData.map((wine: any) => {
         const currentYear = new Date().getFullYear();
         const randomYear = Math.floor(Math.random() * 20) + (currentYear - 25);
         const randomPrice = Math.floor(Math.random() * 500) + 50;
@@ -193,15 +193,15 @@ export const getRecommendedWines = async (weatherCondition: string): Promise<Win
           id: wine.id,
           name: wine.name,
           type: wine.wine_type || wine.type,
-          region: wine.country?.name || 'Região Desconhecida',
+          region: wine.country?.name || 'Região não informada',
           year: randomYear.toString(),
           rating: Math.round((Math.random() * 2 + 3) * 10) / 10,
           price: `R$ ${randomPrice},00`,
           imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
           description: wine.description || 'Vinho de qualidade excepcional.',
           grapes: wine.name,
-          characteristics: wine.characteristics?.map(c => c.characteristic.name) || [],
-          pairings: wine.food_pairings?.map(p => p.food_pairing.name) || []
+          characteristics: wine.characteristics?.map((c: any) => c.characteristic.name) || [],
+          pairings: wine.food_pairings?.map((p: any) => p.food_pairing.name) || []
         };
       });
     }
@@ -216,7 +216,7 @@ export const getRecommendedWines = async (weatherCondition: string): Promise<Win
 export const getWines = async (filters: WineFilter & { search?: string }): Promise<WineType[]> => {
   try {
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     if (!isConfigured) {
       return [];
     }
@@ -254,7 +254,7 @@ export const getWines = async (filters: WineFilter & { search?: string }): Promi
     }
 
     if (wineData && wineData.length > 0) {
-      return wineData.map(wine => {
+      return wineData.map((wine: any) => {
         const currentYear = new Date().getFullYear();
         const randomYear = Math.floor(Math.random() * 20) + (currentYear - 25);
         const randomPrice = Math.floor(Math.random() * 500) + 50;
@@ -263,15 +263,15 @@ export const getWines = async (filters: WineFilter & { search?: string }): Promi
           id: wine.id,
           name: wine.name,
           type: wine.wine_type || wine.type,
-          region: wine.country?.name || 'Região Desconhecida',
+          region: wine.country?.name || 'Região não informada',
           year: randomYear.toString(),
           rating: Math.round((Math.random() * 2 + 3) * 10) / 10,
           price: `R$ ${randomPrice},00`,
           imageUrl: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
           description: wine.description || 'Vinho de qualidade excepcional.',
           grapes: wine.name,
-          characteristics: wine.characteristics?.map(c => c.characteristic.name) || [],
-          pairings: wine.food_pairings?.map(p => p.food_pairing.name) || []
+          characteristics: wine.characteristics?.map((c: any) => c.characteristic.name) || [],
+          pairings: wine.food_pairings?.map((p: any) => p.food_pairing.name) || []
         };
       });
     }

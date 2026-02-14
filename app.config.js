@@ -4,7 +4,7 @@ module.exports = {
   expo: {
     name: "WYNI - O vinho do seu jeito",
     slug: "wyni-app",
-    version: "1.0.1", // Atualizado de 1.0.0
+    version: "1.0.2", // Atualizado de 1.0.2
     orientation: "portrait",
     scheme: "wyni-app",
     userInterfaceStyle: "automatic",

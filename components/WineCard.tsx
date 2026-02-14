@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
   TouchableOpacity,
-  Alert 
+  Alert
 } from 'react-native';
 import { Star, Wine, Grape, Heart, Share2 } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
@@ -23,16 +23,18 @@ interface WineCardProps {
   showActions?: boolean;
   isFavorite?: boolean;
   onFavoriteChange?: (isFavorite: boolean) => void;
+  onPress?: () => void;
 }
 
-export function WineCard({ 
-  wine, 
-  featured, 
-  horizontal, 
-  compact, 
+export function WineCard({
+  wine,
+  featured,
+  horizontal,
+  compact,
   showActions = false,
   isFavorite = false,
-  onFavoriteChange 
+  onFavoriteChange,
+  onPress
 }: WineCardProps) {
   const { user } = useAuth(); // Recupera o usuário autenticado
   const [favoriteLoading, setFavoriteLoading] = useState(false); // Estado para evitar múltiplos cliques
@@ -48,13 +50,13 @@ export function WineCard({
 
     try {
       setFavoriteLoading(true);
-      
+
       // Caso o vinho seja uma sugestão de IA (id começa com 'ai-')
       if (wine.id.startsWith('ai-')) {
         if (!isFavorite) {
           // Verifica se já existe um vinho salvo com o mesmo nome
           const existingWine = await wineStorageService.findSavedWineByName(wine.name);
-          
+
           let wineToFavorite;
           if (existingWine) {
             wineToFavorite = existingWine;
@@ -76,7 +78,7 @@ export function WineCard({
           if (wineToFavorite) {
             // Garante que o vinho ainda não esteja favoritado
             const isAlreadyFavorite = await wineStorageService.isWineFavorite(wineToFavorite.id);
-            
+
             if (!isAlreadyFavorite) {
               await wineStorageService.toggleFavorite(wineToFavorite.id);
               onFavoriteChange?.(true);
@@ -87,7 +89,7 @@ export function WineCard({
         } else {
           // Remove o vinho dos favoritos
           const savedWine = await wineStorageService.findSavedWineByName(wine.name);
-          
+
           if (savedWine) {
             await wineStorageService.toggleFavorite(savedWine.id);
             onFavoriteChange?.(false);
@@ -128,7 +130,7 @@ export function WineCard({
   // Renderiza versão compacta do card
   if (compact) {
     return (
-      <TouchableOpacity style={styles.compactCard}>
+      <TouchableOpacity style={styles.compactCard} onPress={onPress}>
         <Image source={{ uri: wine.imageUrl }} style={styles.compactImage} />
         <View style={styles.compactContent}>
           <Text style={styles.compactName} numberOfLines={1}>
@@ -139,18 +141,18 @@ export function WineCard({
           </Text>
           {showActions && (
             <View style={styles.compactActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleFavoritePress}
                 disabled={favoriteLoading}
                 style={styles.actionButton}
               >
-                <Heart 
-                  size={16} 
+                <Heart
+                  size={16}
                   color={isFavorite ? colors.secondary : colors.textSecondary}
                   fill={isFavorite ? colors.secondary : 'none'}
                 />
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleSharePress}
                 style={styles.actionButton}
               >
@@ -166,7 +168,7 @@ export function WineCard({
   // Renderiza versão horizontal do card
   if (horizontal) {
     return (
-      <TouchableOpacity style={styles.horizontalCard}>
+      <TouchableOpacity style={styles.horizontalCard} onPress={onPress}>
         <Image source={{ uri: wine.imageUrl }} style={styles.horizontalImage} />
         <View style={styles.horizontalContent}>
           <View style={styles.horizontalHeader}>
@@ -175,18 +177,18 @@ export function WineCard({
             </Text>
             {showActions && (
               <View style={styles.horizontalActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleFavoritePress}
                   disabled={favoriteLoading}
                   style={styles.actionButton}
                 >
-                  <Heart 
-                    size={20} 
+                  <Heart
+                    size={20}
                     color={isFavorite ? colors.secondary : colors.textSecondary}
                     fill={isFavorite ? colors.secondary : 'none'}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleSharePress}
                   style={styles.actionButton}
                 >
@@ -195,7 +197,7 @@ export function WineCard({
               </View>
             )}
           </View>
-          
+
           {/* Tipo do vinho */}
           <View style={styles.typeContainer}>
             <Wine size={16} color={colors.primary} />
@@ -245,44 +247,45 @@ export function WineCard({
 
   // Renderização padrão do card (modo "featured" ou normal)
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-        styles.card, 
+        styles.card,
         featured && styles.featuredCard
       ]}
+      onPress={onPress}
     >
-      <Image 
-        source={{ uri: wine.imageUrl }} 
+      <Image
+        source={{ uri: wine.imageUrl }}
         style={[
           styles.image,
           featured && styles.featuredImage
-        ]} 
+        ]}
       />
       <View style={styles.content}>
         <View style={styles.cardHeader}>
-          <Text 
+          <Text
             style={[
               styles.name,
               featured && styles.featuredName
-            ]} 
+            ]}
             numberOfLines={2}
           >
             {wine.name}
           </Text>
           {showActions && (
             <View style={styles.cardActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleFavoritePress}
                 disabled={favoriteLoading}
                 style={styles.actionButton}
               >
-                <Heart 
-                  size={18} 
+                <Heart
+                  size={18}
                   color={isFavorite ? colors.secondary : colors.textSecondary}
                   fill={isFavorite ? colors.secondary : 'none'}
                 />
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleSharePress}
                 style={styles.actionButton}
               >

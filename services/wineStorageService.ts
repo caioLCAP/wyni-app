@@ -1,4 +1,5 @@
 import { supabase, isConfigured } from './supabaseClient';
+import { WineType } from '@/types/wine';
 
 export interface SavedWine {
   id: string;
@@ -21,6 +22,10 @@ export interface SavedWine {
   created_at: string;
   updated_at: string;
   is_favorite?: boolean;
+  weather?: string;
+  location_city?: string;
+  location_country?: string;
+  moment_type?: string;
 }
 
 export interface WineAnalysisData {
@@ -37,6 +42,10 @@ export interface WineAnalysisData {
   priceRange?: string;
   description?: string;
   rating?: number;
+  weather?: string;
+  location_city?: string;
+  location_country?: string;
+  moment_type?: string;
 }
 
 export class WineStorageService {
@@ -117,7 +126,7 @@ export class WineStorageService {
         return null;
       }
 
-      const similarWine = data.find(wine => {
+      const similarWine = data.find((wine: SavedWine) => {
         const savedWineName = wine.wine_name?.toLowerCase().trim();
         if (!savedWineName) return false;
 
@@ -174,14 +183,14 @@ export class WineStorageService {
       const normalizedSearchName = this.normalizeWineName(wineName);
 
       // Procurar por correspondência exata primeiro
-      let foundWine = data.find(wine => {
+      let foundWine = data.find((wine: SavedWine) => {
         const normalizedWineName = this.normalizeWineName(wine.wine_name || '');
         return normalizedWineName === normalizedSearchName;
       });
 
       // Se não encontrou correspondência exata, procurar por similaridade
       if (!foundWine) {
-        foundWine = data.find(wine => {
+        foundWine = data.find((wine: SavedWine) => {
           const normalizedWineName = this.normalizeWineName(wine.wine_name || '');
           return normalizedWineName.includes(normalizedSearchName) ||
             normalizedSearchName.includes(normalizedWineName);
@@ -242,7 +251,11 @@ export class WineStorageService {
         image_url: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
         ai_analysis: analysis,
         grape_varieties: grapeVarieties,
-        food_pairings: foodPairings
+        food_pairings: foodPairings,
+        weather: analysis.weather,
+        location_city: analysis.location_city,
+        location_country: analysis.location_country,
+        moment_type: analysis.moment_type
       };
 
       console.log('Dados preparados para inserção:', wineData);
@@ -346,6 +359,42 @@ export class WineStorageService {
   }
 
   /**
+   * Busca um vinho salvo pelo ID
+   */
+  async getSavedWineById(id: string): Promise<SavedWine | null> {
+    if (!isConfigured) {
+      return null;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        return null;
+      }
+
+      // Remover prefixo 'saved-' se existir
+      const cleanId = id.startsWith('saved-') ? id.replace('saved-', '') : id;
+
+      const { data, error } = await supabase
+        .from('saved_wines')
+        .select('*')
+        .eq('id', cleanId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        throw error;
+      };
+
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar vinho por ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Busca favoritos do usuário
    */
   async getUserFavorites(): Promise<SavedWine[]> {
@@ -370,7 +419,7 @@ export class WineStorageService {
 
       if (error) throw error;
 
-      const favorites = data?.map(item => ({ ...item.wine, is_favorite: true })) || [];
+      const favorites = data?.map((item: any) => ({ ...item.wine, is_favorite: true })) || [];
 
       // Remover duplicatas baseadas no nome normalizado
       const uniqueFavorites = [];
@@ -604,6 +653,9 @@ export class WineStorageService {
       imageUrl: wine.image_url || 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
       description: wine.description,
       grapes: Array.isArray(wine.grape_varieties) ? wine.grape_varieties.join(', ') : (wine.grape_varieties || wine.wine_name),
+      weather: wine.weather,
+      location: wine.location_city ? `${wine.location_city}${wine.location_country ? `, ${wine.location_country}` : ''}` : wine.location_country,
+      moment: wine.moment_type,
       characteristics: [],
       pairings: wine.food_pairings || [],
       aromas: []
