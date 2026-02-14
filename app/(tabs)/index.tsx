@@ -9,6 +9,7 @@ import {
   Dimensions,
   ImageBackground,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Sun, CloudRain, Wind, ThermometerSun, Clock, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -197,7 +198,28 @@ export default function DiscoverScreen() {
   const getDayContext = () => {
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const today = new Date().getDay();
-    return days[today];
+    const dayName = days[today];
+    // Domingo (0) e Sábado (6) são masculinos, os outros são femininos (a Segunda, a Sexta, etc.)
+    const preposition = (today === 0 || today === 6) ? 'do' : 'da';
+    return `${preposition} ${dayName}`;
+  };
+
+  const handleMomentoWyniPress = () => {
+    if (!user) {
+      Alert.alert(
+        'Login necessário',
+        'Para acessar o Momento Wyni, você precisa estar logado.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Fazer Login',
+            onPress: () => router.push('/login')
+          }
+        ]
+      );
+      return;
+    }
+    router.push('/scanner');
   };
 
   return (
@@ -213,7 +235,7 @@ export default function DiscoverScreen() {
           <View style={styles.headerContent}>
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>Descobertas do {getDayContext()}</Text>
+              <Text style={styles.title}>Descobertas {getDayContext()}</Text>
             </View>
             <View style={styles.weatherContainer}>
               {renderWeatherIcon()}
@@ -263,7 +285,7 @@ export default function DiscoverScreen() {
         </View>
 
         <View style={styles.section}>
-          <TouchableOpacity onPress={() => router.push('/scanner')}>
+          <TouchableOpacity onPress={handleMomentoWyniPress}>
             <ImageBackground
               source={{ uri: 'https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg' }}
               style={styles.momentCard}

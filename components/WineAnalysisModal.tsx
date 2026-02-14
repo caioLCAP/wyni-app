@@ -39,6 +39,7 @@ interface WineAnalysisModalProps {
   onClose: () => void;
   analysis: WineAnalysisResult | null;
   onSaveWine?: (savedWine: SavedWine) => void;
+  imageUri?: string | null; // Image to be uploaded
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -47,7 +48,8 @@ export function WineAnalysisModal({
   visible,
   onClose,
   analysis,
-  onSaveWine
+  onSaveWine,
+  imageUri
 }: WineAnalysisModalProps) {
   const { user } = useAuth();
   const [saving, setSaving] = React.useState(false);
@@ -141,7 +143,8 @@ export function WineAnalysisModal({
         // Adicionando a característica que mais gostou como parte da descrição ou notas, se desejar salvar
         tastingNotes: likedCharacteristic
           ? (analysis.tastingNotes ? `${analysis.tastingNotes}\n\nO que mais gostou: ${likedCharacteristic}` : `O que mais gostou: ${likedCharacteristic}`)
-          : analysis.tastingNotes
+          : analysis.tastingNotes,
+        imageUri: imageUri || undefined // Pass image to be uploaded
       };
 
       const savedWine = await wineStorageService.saveWineFromAI(wineData);

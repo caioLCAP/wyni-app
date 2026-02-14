@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
@@ -7,6 +8,7 @@ import { ThemeContext, useTheme } from '@/hooks/useTheme';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 import { locationService } from '@/services/locationService';
+import { updateService } from '@/services/updateService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -19,6 +21,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     checkLocationPermission();
+    updateService.checkAndPromptForUpdate(); // Check for updates on mount
   }, []);
 
   const checkLocationPermission = async () => {

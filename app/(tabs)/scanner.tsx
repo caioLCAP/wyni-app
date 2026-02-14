@@ -475,6 +475,7 @@ export default function ScannerScreen() {
           onClose={() => setShowAIModal(false)}
           analysis={aiAnalysis}
           onSaveWine={handleSaveWineFromAI}
+          imageUri={capturedPhoto} // Pass captured photo
         />
       </ScrollView>
     );

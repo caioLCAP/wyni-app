@@ -46,6 +46,7 @@ export interface WineAnalysisData {
   location_city?: string;
   location_country?: string;
   moment_type?: string;
+  imageUri?: string; // Local URI for upload
 }
 
 export class WineStorageService {
@@ -56,6 +57,59 @@ export class WineStorageService {
       WineStorageService.instance = new WineStorageService();
     }
     return WineStorageService.instance;
+  }
+
+  /**
+   * Upload wine image to Supabase Storage
+   */
+  async uploadWineImage(userId: string, imageUri: string): Promise<string | null> {
+    if (!isConfigured) return null;
+
+    try {
+      console.log('Iniciando upload da imagem do vinho...');
+
+      // 1. Definir caminho do arquivo
+      const timestamp = Date.now();
+      const fileName = `${userId}/${timestamp}.jpg`;
+      const filePath = `${fileName}`;
+
+      console.log('Fazendo upload para:', filePath);
+
+      // 2. Converter URI para ArrayBuffer
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error('Falha ao ler o arquivo: tamanho 0 bytes');
+      }
+
+      // 3. Upload para o Supabase Storage (bucket 'wines')
+      // Nota: Certifique-se de criar o bucket 'wines' no Supabase
+      const { data, error: uploadError } = await supabase.storage
+        .from('wines')
+        .upload(filePath, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError);
+        // Se o bucket não existir ou der erro, retornamos null e o código usará a imagem padrão
+        return null;
+      }
+
+      // 4. Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('wines')
+        .getPublicUrl(filePath);
+
+      console.log('Upload concluído. URL:', publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error('Erro no serviço de upload de imagem de vinho:', error);
+      return null;
+    }
   }
 
   /**
@@ -228,6 +282,15 @@ export class WineStorageService {
         return existingWine;
       }
 
+      // Upload da imagem se existir
+      let imageUrl = 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg';
+      if (analysis.imageUri) {
+        const uploadedUrl = await this.uploadWineImage(user.id, analysis.imageUri);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        }
+      }
+
       // Preparar arrays formatados corretamente
       const grapeVarieties = this.formatArrayForPostgres(analysis.grapeVarieties);
       const foodPairings = this.formatArrayForPostgres(analysis.foodPairings);
@@ -248,7 +311,7 @@ export class WineStorageService {
         price_range: analysis.priceRange ? String(analysis.priceRange).trim() : null,
         description: analysis.description ? String(analysis.description).trim() : null,
         rating: analysis.rating && !isNaN(Number(analysis.rating)) ? Number(analysis.rating) : null,
-        image_url: 'https://images.pexels.com/photos/2912108/pexels-photo-2912108.jpeg',
+        image_url: imageUrl,
         ai_analysis: analysis,
         grape_varieties: grapeVarieties,
         food_pairings: foodPairings,
