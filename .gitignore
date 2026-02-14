@@ -39,3 +39,4 @@ yarn-error.*
 !package.json
 services/*.json
 .env
+service-account*.json
