@@ -13,6 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { X, Wine, Calendar, MapPin, Grape, Percent, Utensils, DollarSign, Save, Share2, Cloud, Sun, Clock, Star } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { colors } from '@/constants/colors';
 import { wineStorageService, WineAnalysisData, SavedWine } from '@/services/wineStorageService';
 import { useAuth } from '@/providers/AuthProvider';
