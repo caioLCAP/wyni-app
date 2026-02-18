@@ -15,6 +15,10 @@ export interface WineType {
   weather?: string;
   location?: string;
   moment?: string;
+  style?: string;
+  servingTemp?: string;
+  preservation?: string;
+  occasions?: string[];
 }
 
 export interface WineFilter {

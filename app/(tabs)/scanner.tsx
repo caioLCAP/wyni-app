@@ -13,6 +13,7 @@ import {
 import { Camera, Sparkles, Camera as CameraIcon, RotateCcw, Wine, TriangleAlert as AlertTriangle, ScanLine, BookOpen, Image as ImageIcon } from 'lucide-react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { colors } from '@/constants/colors';
 import { WineDetailsCard } from '@/components/WineDetailsCard';
 import { WineAnalysisModal } from '@/components/WineAnalysisModal';
@@ -40,6 +41,10 @@ interface WineAnalysisResult {
   priceRange?: string;
   description?: string;
   confidence?: number;
+  style?: string;
+  servingTemp?: string;
+  preservation?: string;
+  occasions?: string[];
 }
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -168,7 +173,11 @@ export default function ScannerScreen() {
       grapes: Array.isArray(savedWine.grape_varieties) ? savedWine.grape_varieties.join(', ') : (savedWine.grape_varieties || savedWine.wine_name),
       characteristics: [],
       pairings: savedWine.food_pairings || [],
-      aromas: savedWine.tasting_notes ? [savedWine.tasting_notes] : []
+      aromas: savedWine.tasting_notes ? [savedWine.tasting_notes] : [],
+      style: savedWine.ai_analysis?.style,
+      servingTemp: savedWine.ai_analysis?.servingTemp,
+      preservation: savedWine.ai_analysis?.preservation,
+      occasions: savedWine.ai_analysis?.occasions
     };
   };
 
@@ -278,20 +287,92 @@ export default function ScannerScreen() {
     router.push('/(tabs)/library');
   };
 
-  const handleShareWine = (wine: WineType) => {
+  const handleShareWine = async (wine: WineType) => {
     try {
-      const shareData: ShareWineData = {
-        name: wine.name,
-        region: wine.region,
-        vintage: wine.year,
-        description: wine.description,
-        rating: wine.rating,
-        grapes: wine.grapes || 'Variedade não informada',
-      };
+      console.log('Wine details for sharing:', JSON.stringify(wine, null, 2));
+      console.log('Pairings:', wine.pairings);
+      console.log('Aromas:', wine.aromas);
 
-      shareService.shareWine(shareData);
+      let fullAnalysisText = '🍷 DETALHES DO VINHO\n';
+      fullAnalysisText += '═══════════════════════════\n\n';
+
+      // Informações Básicas
+      fullAnalysisText += '📋 INFORMAÇÕES BÁSICAS\n';
+      fullAnalysisText += '─────────────────────\n';
+      fullAnalysisText += `🍷 Nome: ${wine.name}\n`;
+      if (wine.type) fullAnalysisText += `🍇 Tipo: ${wine.type}\n`;
+      if (wine.style) fullAnalysisText += `🎨 Estilo: ${wine.style}\n`; // Novo
+      if (wine.year) fullAnalysisText += `📅 Safra: ${wine.year}\n`;
+      if (wine.rating) fullAnalysisText += `⭐ Avaliação: ${wine.rating}/5\n`;
+      if (wine.price) fullAnalysisText += `💰 Preço: ${wine.price}\n`;
+      fullAnalysisText += '\n';
+
+      // Serviço e Guarda (Novo)
+      if (wine.servingTemp || wine.preservation || (wine.occasions && wine.occasions.length > 0)) {
+        fullAnalysisText += '🕰️ SERVIÇO E MOMENTO\n';
+        fullAnalysisText += '─────────────────────\n';
+        if (wine.servingTemp) fullAnalysisText += `🌡️ Temperatura: ${wine.servingTemp}\n`;
+        if (wine.preservation) fullAnalysisText += `📦 Guarda: ${wine.preservation}\n`;
+
+        if (wine.occasions && wine.occasions.length > 0) {
+          fullAnalysisText += '🎉 Ocasiões:\n';
+          wine.occasions.forEach(occasion => {
+            fullAnalysisText += `   • ${occasion}\n`;
+          });
+        }
+        fullAnalysisText += '\n';
+      }
+
+      // Origem
+      if (wine.region) {
+        fullAnalysisText += '🌍 ORIGEM\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `📍 Região: ${wine.region}\n`;
+        fullAnalysisText += '\n';
+      }
+
+      // Uvas
+      if (wine.grapes) {
+        fullAnalysisText += '🍇 UVAS\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `${wine.grapes}\n\n`;
+      }
+
+      // Descrição
+      if (wine.description) {
+        fullAnalysisText += '📝 DESCRIÇÃO\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `${wine.description}\n\n`;
+      }
+
+      // Harmonizações
+      if (wine.pairings && wine.pairings.length > 0) {
+        fullAnalysisText += '🍽️ HARMONIZAÇÕES\n';
+        fullAnalysisText += '─────────────────────\n';
+        wine.pairings.forEach((pairing, index) => {
+          fullAnalysisText += `  ${index + 1}. ${pairing}\n`;
+        });
+        fullAnalysisText += '\n';
+      }
+
+      // Aromas
+      if (wine.aromas && wine.aromas.length > 0) {
+        fullAnalysisText += '👃 AROMAS/NOTAS\n';
+        fullAnalysisText += '─────────────────────\n';
+        wine.aromas.forEach((aroma, index) => {
+          fullAnalysisText += `  ${index + 1}. ${aroma}\n`;
+        });
+        fullAnalysisText += '\n';
+      }
+
+      fullAnalysisText += '═══════════════════════════\n';
+      fullAnalysisText += '📱 Via WYNI App\n';
+
+      await Clipboard.setStringAsync(fullAnalysisText);
+      Alert.alert('Copiado! ✅', 'Detalhes do vinho copiados para a área de transferência.', [{ text: 'OK' }]);
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível compartilhar o vinho');
+      console.error('Erro ao copiar:', error);
+      Alert.alert('Erro', 'Não foi possível copiar os dados');
     }
   };
 
@@ -415,7 +496,7 @@ export default function ScannerScreen() {
             disabled={analyzing}
           >
             <RotateCcw size={20} color={colors.text} />
-            <Text style={styles.secondaryButtonText}>Tirar Nova Foto</Text>
+            <Text style={styles.secondaryButtonText}>Nova foto</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

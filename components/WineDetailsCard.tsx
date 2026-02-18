@@ -21,6 +21,10 @@ interface WineDetailsCardProps {
     weather?: string;
     moment?: string;
     location?: string;
+    style?: string;
+    servingTemp?: string;
+    preservation?: string;
+    occasions?: string[];
   };
 }
 
@@ -79,6 +83,49 @@ export function WineDetailsCard({ wine }: WineDetailsCardProps) {
                     <Text style={styles.contextValue}>{wine.weather}</Text>
                   </View>
                 )}
+              </View>
+            </View>
+          )}
+
+          {/* Serviço e Estilo - Novo */}
+          {(wine.style || wine.servingTemp || wine.preservation) && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Estilo & Serviço</Text>
+              <View style={styles.contextContainer}>
+                {wine.style && (
+                  <View style={styles.contextItem}>
+                    <Text style={styles.contextLabel} numberOfLines={1}>Estilo</Text>
+                    <Text style={styles.contextValue}>{wine.style}</Text>
+                  </View>
+                )}
+                {wine.servingTemp && (
+                  <View style={styles.contextItem}>
+                    <Text style={styles.contextLabel} numberOfLines={1}>Serviço</Text>
+                    <Text style={styles.contextValue}>{wine.servingTemp}</Text>
+                  </View>
+                )}
+              </View>
+              {wine.preservation && (
+                <View style={[styles.contextContainer, { marginTop: 12 }]}>
+                  <View style={styles.contextItem}>
+                    <Text style={styles.contextLabel}>Potencial de Guarda</Text>
+                    <Text style={styles.contextValue}>{wine.preservation}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Ocasiões */}
+          {wine.occasions && wine.occasions.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ocasiões</Text>
+              <View style={styles.tagsContainer}>
+                {wine.occasions.map((occasion, index) => (
+                  <View key={index} style={styles.pairingTag}>
+                    <Text style={styles.pairingTagText}>{occasion}</Text>
+                  </View>
+                ))}
               </View>
             </View>
           )}

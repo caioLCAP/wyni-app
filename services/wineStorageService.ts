@@ -721,7 +721,11 @@ export class WineStorageService {
       moment: wine.moment_type,
       characteristics: [],
       pairings: wine.food_pairings || [],
-      aromas: []
+      aromas: wine.tasting_notes ? [wine.tasting_notes] : [],
+      style: wine.ai_analysis?.style,
+      servingTemp: wine.ai_analysis?.servingTemp,
+      preservation: wine.ai_analysis?.preservation,
+      occasions: wine.ai_analysis?.occasions
     }));
   };
   /**

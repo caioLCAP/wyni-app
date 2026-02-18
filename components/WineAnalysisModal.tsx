@@ -29,9 +29,13 @@ interface WineAnalysisResult {
   grapeVarieties?: string[];
   alcoholContent?: string;
   wineType?: string;
+  style?: string;
   tastingNotes?: string;
   foodPairings?: string[];
   priceRange?: string;
+  servingTemp?: string;
+  preservation?: string;
+  occasions?: string[];
   description?: string;
   confidence?: number;
 }
@@ -177,21 +181,114 @@ export function WineAnalysisModal({
     if (!analysis) return;
 
     try {
-      const shareData: ShareWineData = {
-        name: analysis.wineName || 'Vinho Analisado',
-        winery: analysis.winery,
-        region: analysis.region,
-        vintage: analysis.vintage,
-        description: analysis.description,
-        rating: 4.5,
-        grapes: Array.isArray(analysis.grapeVarieties)
-          ? analysis.grapeVarieties.join(', ')
-          : (analysis.grapeVarieties || 'Não especificado'),
-      };
+      console.log('Análise completa:', JSON.stringify(analysis, null, 2));
+      console.log('Food Pairings:', analysis.foodPairings);
+      console.log('Tasting Notes:', analysis.tastingNotes);
 
-      await shareService.shareWine(shareData);
+      let fullAnalysisText = '🍷 ANÁLISE COMPLETA DO VINHO\n';
+      fullAnalysisText += '═══════════════════════════\n\n';
+
+      // Informações Básicas
+      if (analysis.wineName || analysis.winery || analysis.vintage || analysis.wineType || analysis.alcoholContent) {
+        fullAnalysisText += '📋 INFORMAÇÕES BÁSICAS\n';
+        fullAnalysisText += '─────────────────────\n';
+
+        if (analysis.wineName) fullAnalysisText += `🍷 Nome: ${analysis.wineName}\n`;
+        if (analysis.winery) fullAnalysisText += `🏛️ Vinícola: ${analysis.winery}\n`;
+        if (analysis.vintage) fullAnalysisText += `📅 Safra: ${analysis.vintage}\n`;
+        if (analysis.wineType) fullAnalysisText += `🍇 Tipo: ${analysis.wineType}\n`;
+        if (analysis.style) fullAnalysisText += `🎨 Estilo: ${analysis.style}\n`; // Novo
+        if (analysis.alcoholContent) fullAnalysisText += `🌡️ Teor Alcoólico: ${analysis.alcoholContent}\n`;
+        fullAnalysisText += '\n';
+      }
+
+      // Origem
+      if (analysis.region || analysis.country) {
+        fullAnalysisText += '🌍 ORIGEM\n';
+        fullAnalysisText += '─────────────────────\n';
+        if (analysis.region) fullAnalysisText += `📍 Região: ${analysis.region}\n`;
+        if (analysis.country) fullAnalysisText += `🗺️ País: ${analysis.country}\n`;
+        fullAnalysisText += '\n';
+      }
+
+      // Serviço e Guarda (Novo)
+      if (analysis.servingTemp || analysis.preservation || (analysis.occasions && analysis.occasions.length > 0)) {
+        fullAnalysisText += '🕰️ SERVIÇO E MOMENTO\n';
+        fullAnalysisText += '─────────────────────\n';
+        if (analysis.servingTemp) fullAnalysisText += `🌡️ Temperatura: ${analysis.servingTemp}\n`;
+        if (analysis.preservation) fullAnalysisText += `📦 Guarda: ${analysis.preservation}\n`;
+
+        if (analysis.occasions && analysis.occasions.length > 0) {
+          fullAnalysisText += '🎉 Ocasiões:\n';
+          analysis.occasions.forEach(occasion => {
+            fullAnalysisText += `   • ${occasion}\n`;
+          });
+        }
+        fullAnalysisText += '\n';
+      }
+
+      // Castas
+      if (analysis.grapeVarieties && Array.isArray(analysis.grapeVarieties) && analysis.grapeVarieties.length > 0) {
+        fullAnalysisText += '🍇 CASTAS/UVAS\n';
+        fullAnalysisText += '─────────────────────\n';
+        analysis.grapeVarieties.forEach((grape, index) => {
+          fullAnalysisText += `  ${index + 1}. ${grape}\n`;
+        });
+        fullAnalysisText += '\n';
+      }
+
+      // Descrição & Notas
+      if (analysis.description) {
+        fullAnalysisText += '📝 DESCRIÇÃO\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `${analysis.description}\n\n`;
+      }
+
+      if (analysis.tastingNotes) {
+        fullAnalysisText += '👃 NOTAS DE DEGUSTAÇÃO\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `${analysis.tastingNotes}\n\n`;
+      }
+
+      // Harmonizações
+      const hasPairings = analysis.foodPairings &&
+        (Array.isArray(analysis.foodPairings) ? analysis.foodPairings.length > 0 : typeof analysis.foodPairings === 'string');
+
+      if (hasPairings) {
+        fullAnalysisText += '🍽️ HARMONIZAÇÕES\n';
+        fullAnalysisText += '─────────────────────\n';
+
+        if (Array.isArray(analysis.foodPairings)) {
+          analysis.foodPairings.forEach((pairing, index) => {
+            fullAnalysisText += `  ${index + 1}. ${pairing}\n`;
+          });
+        } else {
+          fullAnalysisText += `${analysis.foodPairings}\n`;
+        }
+        fullAnalysisText += '\n';
+      }
+
+      // Preço e Confiança
+      if (analysis.priceRange) {
+        fullAnalysisText += '💰 FAIXA DE PREÇO ESTIMADA\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `${analysis.priceRange}\n\n`;
+      }
+
+      if (analysis.confidence) {
+        fullAnalysisText += '📊 CONFIANÇA DA ANÁLISE\n';
+        fullAnalysisText += '─────────────────────\n';
+        fullAnalysisText += `${Math.round(analysis.confidence * 100)}%\n\n`;
+      }
+
+      fullAnalysisText += '═══════════════════════════\n';
+      fullAnalysisText += '📱 Analisado com WYNI\n';
+
+      await Clipboard.setStringAsync(fullAnalysisText);
+      Alert.alert('Copiado! ✅', 'Análise copiada para a área de transferência.', [{ text: 'OK' }]);
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível compartilhar o vinho');
+      console.error('Erro ao copiar:', error);
+      Alert.alert('Erro', 'Não foi possível copiar os dados.');
     }
   };
 
@@ -267,6 +364,16 @@ export function WineAnalysisModal({
                   </View>
                 )}
 
+                {analysis.style && (
+                  <View style={styles.infoItem}>
+                    <Star size={20} color={colors.primary} />
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Estilo</Text>
+                      <Text style={styles.infoValue}>{analysis.style}</Text>
+                    </View>
+                  </View>
+                )}
+
                 {analysis.alcoholContent && (
                   <View style={styles.infoItem}>
                     <Percent size={20} color={colors.primary} />
@@ -277,6 +384,48 @@ export function WineAnalysisModal({
                   </View>
                 )}
               </View>
+
+              {/* Serviço e Momento (Novo) */}
+              {(analysis.servingTemp || analysis.preservation || (analysis.occasions && analysis.occasions.length > 0)) && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Serviço & Momento</Text>
+
+                  {analysis.servingTemp && (
+                    <View style={styles.infoItem}>
+                      <Percent size={20} color={colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Temperatura Ideal</Text>
+                        <Text style={styles.infoValue}>{analysis.servingTemp}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {analysis.preservation && (
+                    <View style={styles.infoItem}>
+                      <Clock size={20} color={colors.primary} />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Potencial de Guarda</Text>
+                        <Text style={styles.infoValue}>{analysis.preservation}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {analysis.occasions && analysis.occasions.length > 0 && (
+                    <View style={styles.infoItem}>
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Ocasiões Sugeridas</Text>
+                        <View style={styles.tagsContainer}>
+                          {analysis.occasions.map((occasion, index) => (
+                            <View key={index} style={styles.pairingTag}>
+                              <Text style={styles.pairingTagText}>{occasion}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* Origem */}
               {(analysis.region || analysis.country) && (

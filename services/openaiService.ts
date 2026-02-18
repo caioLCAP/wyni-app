@@ -12,9 +12,13 @@ interface WineAnalysisResult {
   grapeVarieties?: string[];
   alcoholContent?: string;
   wineType?: string;
+  style?: string; // Estilo do vinho (ex: "Tinto encorpado e estruturado")
   tastingNotes?: string;
   foodPairings?: string[];
   priceRange?: string;
+  servingTemp?: string; // Temperatura ideal (ex: "16ºC a 18ºC")
+  preservation?: string; // Potencial de guarda
+  occasions?: string[]; // Ocasiões sugeridas
   description?: string;
 }
 
@@ -44,105 +48,59 @@ export class OpenAIService {
   private isConfigured(): boolean {
     return this.openai !== null && !!OPENAI_API_KEY && OPENAI_API_KEY !== 'your_openai_api_key_here';
   }
-
-  /**
-   * Analisa o texto extraído de um rótulo de vinho usando OpenAI
-   */
-  public async analyzeWineLabel(extractedText: string): Promise<WineAnalysisResult> {
-    if (!this.isConfigured()) {
-      throw new Error('OpenAI não está configurado. Para usar a análise com IA, você precisa:\n\n1. Obter uma chave da API OpenAI em https://platform.openai.com/api-keys\n2. Adicionar informações de cobrança em https://platform.openai.com/settings/organization/billing\n3. Configurar a variável EXPO_PUBLIC_OPENAI_API_KEY no arquivo .env\n4. Reiniciar o servidor de desenvolvimento');
-    }
-
-    try {
-      const prompt = this.createWineAnalysisPrompt(extractedText);
-
-      const completion = await this.openai!.chat.completions.create({
-        model: "gpt-4o", // Modelo mais capaz para melhor precisão e raciocínio
-        messages: [
-          {
-            role: "system",
-            content: "Você é um sommelier especialista em vinhos com vasto conhecimento sobre vinícolas, regiões, castas e características de vinhos do mundo todo. Sua tarefa é analisar textos extraídos de rótulos de vinho e fornecer informações precisas e detalhadas."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.3, // Baixa temperatura para respostas mais consistentes
-        max_tokens: 1000,
-        response_format: { type: "json_object" }
-      });
-
-      const response = completion.choices[0]?.message?.content;
-      if (!response) {
-        throw new Error('Resposta vazia da OpenAI');
-      }
-
-      const analysis = JSON.parse(response) as WineAnalysisResult;
-      return this.validateAndEnrichAnalysis(analysis);
-    } catch (error: any) {
-      // Handle specific OpenAI errors
-      if (error?.status === 429) {
-        throw new Error('Limite de uso da API OpenAI excedido. Verifique seu plano e informações de cobrança em platform.openai.com');
-      } else if (error?.status === 401) {
-        throw new Error('Chave da API OpenAI inválida. Verifique suas credenciais.');
-      } else if (error?.status === 403) {
-        throw new Error('Acesso negado à API OpenAI. Verifique suas permissões.');
-      } else if (error?.status >= 500) {
-        throw new Error('Erro interno do servidor OpenAI. Tente novamente em alguns minutos.');
-      }
-
-      throw new Error(
-        error instanceof Error
-          ? `Falha na análise do vinho: ${error.message}`
-          : 'Erro desconhecido ao analisar o vinho'
-      );
-    }
-  }
+  // ... (rest of class until createWineAnalysisPrompt)
 
   /**
    * Cria o prompt para análise do rótulo de vinho
    */
   private createWineAnalysisPrompt(extractedText: string): string {
     return `
-Analise o seguinte texto extraído de um rótulo de vinho e atue como um Sommelier Expert para identificar o vinho.
+Analise o seguinte texto extraído de um rótulo de vinho e atue como um Sommelier Expert Sênior para identificar e descrever o vinho com riqueza de detalhes.
 
 TEXTO DO RÓTULO:
 "${extractedText}"
 
 SEU OBJETIVO:
-Identificar o vinho com precisão baseada APENAS nas informações presentes.
+1. IDENTIFICAR o vinho com a maior precisão possível (Produtor, Nome, Safra, Região).
+2. FORNECER UMA FICHA TÉCNICA COMPLETA E RICA, usando seu conhecimento enciclopédico sobre o vinho identificado.
+   - SE VOCÊ IDENTIFICAR O VINHO (ex: "Catena Malbec"), PREENCHA TODAS AS INFORMAÇÕES TÍPICAS DELE (Estilo, Harmonização, Notas, etc.), mesmo que não estejam escritas no rótulo. Use seu conhecimento de Sommelier.
 
-DIRETRIZES RÍGIDAS - NÃO INVENTE DADOS:
-1. IDENTIFICAÇÃO: Extraia Nome, Vinícola, Safra e Região do texto.
-2. ENRIQUECIMENTO FACTUAL (Permitido): Se você identificar o vinho com certeza (ex: "Brunello di Montalcino"), você PODE preencher informações que são fatos absolutos (ex: Uva "Sangiovese"), mesmo que não estejam no texto.
-3. NÃO INVENTE:
-   - Não chute o teor alcoólico se não estiver escrito.
-   - Não invente uma safra se não estiver escrita.
-   - Não invente nome de vinícola se não estiver claro.
-   - PREÇO: Estime uma faixa de mercado REALISTA para o Brasil.
+DIRETRIZES DE PREENCHIMENTO:
+- **Nome/Safra/Produtor/Teor Alcoólico**: Extraia do texto ou deduza com alta confiança se o vinho for muito famoso.
+- **Região/País**: Se identificar o vinho, preencha a região correta (ex: "Mendoza, Argentina" para Catena Malbec).
+- **Estilo**: Descreva o corpo e estilo (ex: "Tinto encorpado com madeira presente").
+- **Notas de Degustação**: Descreva os aromas e paladar TÍPICOS para este vinho/uva específico.
+- **Harmonização**: Sugira pratos específicos que combinam bem.
+- **Temperatura**: Indique a temperatura ideal de serviço.
+- **Potencial/Guarda**: Indique se é para beber já ou pode guardar.
+- **Preço**: Estime o valor médio de mercado no Brasil (R$).
 
 FORMATO JSON ESPERADO:
 {
-  "wineName": "Nome comercial identificado",
-  "winery": "Produtor (se identificado)",
-  "vintage": "Ano (apenas se explícito)",
+  "wineName": "Nome completo do vinho",
+  "winery": "Produtor",
+  "vintage": "Ano",
   "region": "Região e País",
   "country": "País",
   "grapeVarieties": ["Uva 1", "Uva 2"],
-  "alcoholContent": "Teor % (apenas se explícito, senão null)",
-  "wineType": "Tipo (Tinto, Branco, Rosé, Espumante)",
-  "tastingNotes": "Características sensoriais TÍPICAS deste vinho/uva.",
-  "foodPairings": ["Harmonizações clássicas para este vinho"],
+  "alcoholContent": "Teor %",
+  "wineType": "Tipo (Tinto, Branco, Rosé, Espumante, Sobremesa)",
+  "style": "Descrição curta do estilo (ex: Encorpado, Frutado, Leve)",
+  "tastingNotes": "Texto descritivo sobre aromas (frutas, madeira, especiarias) e paladar (taninos, acidez).",
+  "foodPairings": ["Prato 1", "Prato 2", "Prato 3"],
   "priceRange": "Faixa de preço estimada R$",
-  "description": "Breve descrição sobre o vinho ou produtor."
+  "servingTemp": "Temperatura ideal (ex: 16-18ºC)",
+  "preservation": "Dica de consumo/guarda (ex: Pronto para beber, pode guardar 5 anos)",
+  "occasions": ["Jantar romântico", "Churrasco", "Presente"],
+  "description": "Resumo envolvente sobre o vinho, produtor e curiosidades."
 }
 
 REGRAS FINAIS:
 - Responda SEMPRE em Português do Brasil.
-- Se uma informação não for encontrada e não for um fato enciclopédico atrelado ao vinho identificado, use "Não identificado".
+- Seja detalhista nas notas e harmonizações.
     `;
   }
+  // ... (rest of class)
 
   /**
    * Valida e enriquece a análise retornada pela OpenAI
@@ -222,31 +180,31 @@ REGRAS FINAIS:
             content: [
               {
                 type: "text",
-                text: `Analise a imagem deste rótulo. Extraia os dados visíveis e identifique o vinho.
+                text: `Analise a imagem deste rótulo como um Sommelier Expert Sênior.
                 
-                REGRAS DE OURO (ANTI-ALUCINAÇÃO):
-                1. Extraia EXATAMENTE o que vê (Vinícola, Nome, Safra, Região).
-                2. Se identificar o vinho com certeza (ex: reconhece o rótulo do "Casillero del Diablo Cabernet Sauvignon"), VOCÊ PODE preencher a uva e a região corretas baseado no seu conhecimento, POIS ISSO É FATO.
-                3. SE NÃO TIVER CERTEZA, use "Não identificado".
-                4. NÃO invente safra (vintage) se não estiver visível.
-                5. NÃO invente teor alcoólico se não estiver visível.
-                6. PREÇO: Estime o valor médio de mercado no Brasil (Isso é uma estimativa permitida).
-                7. Harmonização e Notas: Forneça baseadas no TIPO de vinho identificado.
+                SEU OBJETIVO:
+                1. IDENTIFICAR o vinho com a maior precisão possível (Produtor, Nome, Safra, Região).
+                2. FORNECER UMA FICHA TÉCNICA COMPLETA E RICA, usando seu conhecimento.
+                   - AO IDENTIFICAR O VINHO, PREENCHA TODAS AS INFORMAÇÕES TÍPICAS DELE (Estilo, Harmonização, Notas, etc.), mesmo que não estejam visíveis. Use seu conhecimento.
 
                 Retorne JSON:
                 {
-                  "wineName": "Nome",
+                  "wineName": "Nome completo",
                   "winery": "Produtor",
                   "vintage": "Ano ou null",
-                  "region": "Região",
+                  "region": "Região e País",
                   "country": "País",
-                  "grapeVarieties": ["List"],
+                  "grapeVarieties": ["Uva 1", "Uva 2"],
                   "alcoholContent": "Teor ou null",
                   "wineType": "Tipo",
-                  "tastingNotes": "Descrição típica",
-                  "foodPairings": ["Lista"],
-                  "priceRange": "Estimativa R$",
-                  "description": "Breve descrição"
+                  "style": "Descrição do estilo (ex: Encorpado, Leve, Frutado)",
+                  "tastingNotes": "Descrição detalhada de aromas e paladar típicos.",
+                  "foodPairings": ["Prato 1", "Prato 2", "Prato 3"],
+                  "servingTemp": "Temp ideal (ex: 16-18ºC)",
+                  "preservation": "Dica de guarda (ex: Beber já, Guardar 5 anos)",
+                  "occasions": ["Jantar", "Churrasco", "Presente"],
+                  "priceRange": "Estimativa R$ Brasil",
+                  "description": "Resumo envolvente sobre o vinho e produtor."
                 }
 
                 Responda em PORTUGUÊS.`
